@@ -3,7 +3,7 @@
 This project provides a secure web mailer wusing reCaptcha by Google Inc.
 and a token system to authenticate calling sites.
 """
-from requests import get
+from requests import post
 from json import loads
 
 from homeinfo.lib.config import Configuration
