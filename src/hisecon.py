@@ -36,36 +36,35 @@ class Hisecon(WsgiApp):
         """Handles POST requests"""
         query_string = self.query_string(environ)
         qd = self.qd(query_string)
-        cqd = self.cqd(qd)
 
-        sender = cqd.get('sender') or CONFIG.mail['FROM']
-        copy2issuer = cqd.get('copy2issuer') or False
-        reply_email = cqd.get('reply_email')
+        sender = qd.get('sender') or CONFIG.mail['FROM']
+        copy2issuer = True if qd.get('copy2issuer') else False
+        reply_email = qd.get('reply_email')
 
         try:
-            secret = cqd['secret']
+            secret = qd['secret']
         except KeyError:
             return Error('No reCAPTCHA secret provided', status=400)
 
         try:
-            response = cqd['response']
+            response = qd['response']
         except KeyError:
             return Error('No reCAPTCHA response provided', status=400)
 
-        remoteip = cqd.get('remoteip')
+        remoteip = qd.get('remoteip')
 
         try:
-            recipient = cqd['recipient']
+            recipient = qd['recipient']
         except KeyError:
             return Error('No recipient email address provided', status=400)
 
         try:
-            subject = cqd['subject']
+            subject = qd['subject']
         except KeyError:
             return Error('No subject provided', status=400)
 
         try:
-            message = cqd['message']
+            message = qd['message']
         except KeyError:
             return Error('No message provided', status=400)
 
