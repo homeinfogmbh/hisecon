@@ -6,11 +6,26 @@ and a token system to authenticate calling sites.
 from requests import get
 from json import loads
 
+from homeinfo.lib.config import Configuration
 from homeinfo.lib.mail import Mailer, EMail
 from homeinfo.lib.wsgi import Error, InternalServerError, WsgiApp
 
+__all__ = ['Hisecon']
 
-class Mailer(WsgiApp):
+
+class HiseconConfig(Configuration):
+    """Configuration parser for hisecon"""
+
+    @property
+    def mail(self):
+        """Returns the mail section"""
+        return self['mail']
+
+
+CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
+
+
+class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
     DEBUG = True
