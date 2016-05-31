@@ -38,7 +38,7 @@ class Hisecon(WsgiApp):
         qd = self.qd(query_string)
         cqd = self.cqd(qd)
 
-        sender = cqd.get('sender')
+        sender = cqd.get('sender') or CONFIG['FROM']
         copy2issuer = cqd.get('copy2issuer') or False
         reply_email = cqd.get('reply_email')
 
@@ -73,7 +73,7 @@ class Hisecon(WsgiApp):
             mailer = Mailer(
                 CONFIG.mail['ADDR'],
                 int(CONFIG.mail['PORT']),
-                CONFIG.mail['LOGIN_NAME'],
+                CONFIG.mail['USER'],
                 CONFIG.mail['PASSWD'])
 
             email = EMail(subject, sender, recipient, plain=message)
