@@ -43,7 +43,7 @@ class Hisecon(WsgiApp):
         reply_email = cqd.get('reply_email')
 
         try:
-            secret = cqd['token']
+            secret = cqd['secret']
         except KeyError:
             return Error('No reCAPTCHA secret provided', status=400)
 
