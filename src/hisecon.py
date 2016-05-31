@@ -82,6 +82,9 @@ class Hisecon(WsgiApp):
         else:
             return Error('reCAPTCHA check failed', status=400)
 
+    # XXX: Debug!
+    get = post
+
     def _check_recpatcha(self, secret, response, remoteip=None):
         """Verifies Google reCAPTCHA credentials"""
         params = {'secret': secret, 'response': response}
