@@ -8,7 +8,7 @@ version, author, author_email, *_ = GitInfo()
 
 
 setup(
-    name='homie',
+    name='hisecon',
     version=version,
     author=author,
     author_email=author_email,
