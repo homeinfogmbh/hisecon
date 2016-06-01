@@ -49,7 +49,7 @@ class HiseconConfig(Configuration):
     @property
     def mail(self):
         """Returns the mail section"""
-        return self['mail']]
+        return self['mail']
 
 
 class DomainConfig():
