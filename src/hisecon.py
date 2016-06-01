@@ -108,7 +108,9 @@ class Hisecon(WsgiApp):
             else:
                 self.logger.info('Mail sent')
         else:
-            return Error('reCAPTCHA check failed', status=400)
+            msg = 'reCAPTCHA check failed'
+            self.logger.error(msg)
+            return Error(msg, status=400)
 
     # XXX: Debug!
     get = post
