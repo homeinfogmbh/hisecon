@@ -3,8 +3,10 @@
 This project provides a secure web mailer wusing reCaptcha by Google Inc.
 and a token system to authenticate calling sites.
 """
-from requests import post
+from logging import getLogger
 from json import loads
+
+from requests import post
 
 from homeinfo.lib.config import Configuration
 from homeinfo.lib.mail import Mailer, EMail
@@ -32,6 +34,10 @@ class Hisecon(WsgiApp):
 
     RE_CAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
+    def __init__(self, cors=None, date_format=None):
+        super().__init__(cors=cors, date_format=date_format)
+        self.logger = getLogger(name=self.__class__.__name__)
+
     def post(self, environ):
         """Handles POST requests"""
         query_string = self.query_string(environ)
@@ -44,31 +50,42 @@ class Hisecon(WsgiApp):
         try:
             secret = qd['secret']
         except KeyError:
-            return Error('No reCAPTCHA secret provided', status=400)
+            msg = 'No reCAPTCHA secret provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
 
         try:
             response = qd['response']
         except KeyError:
-            return Error('No reCAPTCHA response provided', status=400)
+            msg = 'No reCAPTCHA response provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
 
         remoteip = qd.get('remoteip')
 
         try:
             recipient = qd['recipient']
         except KeyError:
-            return Error('No recipient email address provided', status=400)
+            msg = 'No recipient email address provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
 
         try:
             subject = qd['subject']
         except KeyError:
-            return Error('No subject provided', status=400)
+            msg = 'No subject provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
 
         try:
             message = qd['message']
         except KeyError:
-            return Error('No message provided', status=400)
+            msg = 'No message provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
 
         if self._check_recpatcha(secret, response, remoteip=remoteip):
+            self.logger.info('Got valid reCAPTCHA')
             mailer = Mailer(
                 CONFIG.mail['ADDR'],
                 int(CONFIG.mail['PORT']),
@@ -76,8 +93,20 @@ class Hisecon(WsgiApp):
                 CONFIG.mail['PASSWD'])
 
             email = EMail(subject, sender, recipient, plain=message)
+            self.logger.info(
+                'Created email from "{sender}" to "{recipient}" with subject '
+                '"{subject}" and content "{content}"'.format(
+                    sender=sender,
+                    recipient=recipient,
+                    subject=subject,
+                    content=message))
 
-            mailer.send([email])
+            try:
+                mailer.send([email])
+            except Exception:
+                self.logger.critical('Could not send mail')
+            else:
+                self.logger.info('Mail sent')
         else:
             return Error('reCAPTCHA check failed', status=400)
 
@@ -96,7 +125,8 @@ class Hisecon(WsgiApp):
         try:
             response_dict = loads(response.text)
         except ValueError:
-            return InternalServerError(
-                'Could not parse JSON response of reCAPTCHA')
+            msg = 'Could not parse JSON response of reCAPTCHA'
+            self.logger.error(msg)
+            return InternalServerError(msg)
 
         return response_dict.get('success', False) is True
