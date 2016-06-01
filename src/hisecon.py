@@ -6,7 +6,6 @@ and a token system to authenticate calling sites.
 from logging import getLogger
 from json import loads
 from urllib.parse import unquote
-from traceback import format_exc
 
 from requests import post
 
@@ -108,7 +107,8 @@ class Hisecon(WsgiApp):
             sender
             remoteip
             issuer
-            html
+            body_plain
+            body_html
         """
         query_string = self.query_string(environ)
         self.logger.debug(query_string)
@@ -116,30 +116,29 @@ class Hisecon(WsgiApp):
         qd = self.qd(query_string)
         self.logger.debug(str(qd))
 
-        file = self.file(environ)
-        data = file.read()
-        text = data.decode()
-
         remoteip = qd.get('remoteip')
         issuer = qd.get('issuer')
-        html = True if qd.get('html') False
+        body_plain = qd.get('body_plain')
 
-        if text:
-            self.logger.debug('Got text: {0}'.format(text))
-            text = unquote(text)
-            self.logger.debug('Unquoted text: {0}'.format(text))
-            text = body_plain.replace('<br>', '\n')
-            self.logger.debug('Translated text: {0}'.format(text))
-        else:
-            msg = 'No text body provided'
-            self.logger.error(msg)
-            return Error(msg, status=400)
+        if body_plain:
+            self.logger.debug('Got plain text: {0}'.format(body_plain))
+            body_plain = unquote(body_plain)
+            self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
+            body_plain = body_plain.replace('<br>', '\n')
+            self.logger.debug('Translated plain text: {0}'.format(body_plain))
+
+        body_html = qd.get('body_html')
+
+        if body_html:
+            self.logger.debug('Got HTML text: {0}'.format(body_html))
+            body_html = unquote(body_html)
+            self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
 
         try:
             config = qd.get('config')
         except KeyError:
             msg = 'No configuration provided'
-            self.logger.error(msg)
+            self.logger.warning(msg)
             return Error(msg, status=400)
         else:
             try:
@@ -187,6 +186,11 @@ class Hisecon(WsgiApp):
         else:
             subject = unquote(subject)
 
+        if not body_plain and not body_html:
+            msg = 'No message provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
+
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
@@ -200,13 +204,6 @@ class Hisecon(WsgiApp):
 
                 if issuer:
                     recipients.append(issuer)
-
-                if html:
-                    body_html = text
-                    body_plain = None
-                else:
-                    body_html = None
-                    body_plain = text
 
                 emails = self._emails(
                     sender, recipients, subject,
@@ -230,6 +227,9 @@ class Hisecon(WsgiApp):
             msg = 'Could not parse JSON response of reCAPTCHA'
             self.logger.error(msg)
             return InternalServerError(msg)
+
+    # Allow GET and POST requests
+    get = post
 
     def _emails(self, sender, recipients, subject,
                 body_html=None, body_plain=None):
