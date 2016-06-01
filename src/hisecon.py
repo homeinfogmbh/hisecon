@@ -98,7 +98,7 @@ class Hisecon(WsgiApp):
         """Handles POST requests
 
         Required params:
-            domain
+            config
             response
             recipient
             subject
@@ -107,7 +107,6 @@ class Hisecon(WsgiApp):
             sender
             remoteip
             issuer
-            copy2issuer
             body_plain
             body_html
         """
@@ -122,12 +121,16 @@ class Hisecon(WsgiApp):
         body_plain = qd.get('body_plain')
 
         if body_plain:
+            self.logger.debug('Got plain text: {0}'.format(body_plain))
             body_plain = unquote(body_plain)
+            self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
 
         body_html = qd.get('body_html')
 
         if body_html:
+            self.logger.debug('Got HTML text: {0}'.format(body_html))
             body_html = unquote(body_html)
+            self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
 
         try:
             config = qd.get('config')
