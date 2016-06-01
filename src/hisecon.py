@@ -29,9 +29,6 @@ class HiseconConfig(Configuration):
         return self['recaptcha']
 
 
-CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
-
-
 class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
@@ -42,17 +39,18 @@ class Hisecon(WsgiApp):
     def __init__(self, cors=None, date_format=None):
         super().__init__(cors=cors, date_format=date_format)
         self.logger = getLogger(name=self.__class__.__name__)
+        self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
 
     def post(self, environ):
         """Handles POST requests"""
         query_string = self.query_string(environ)
         qd = self.qd(query_string)
 
-        sender = qd.get('sender') or CONFIG.mail['FROM']
+        sender = qd.get('sender') or self.config.mail['FROM']
         copy2issuer = True if qd.get('copy2issuer') else False
         reply_email = qd.get('reply_email')
 
-        secret = CONFIG.recaptcha['SECRET']
+        secret = self.config.recaptcha['SECRET']
 
         try:
             response = qd['response']
@@ -87,10 +85,10 @@ class Hisecon(WsgiApp):
         if self._check_recpatcha(secret, response, remoteip=remoteip):
             self.logger.info('Got valid reCAPTCHA')
             mailer = Mailer(
-                CONFIG.mail['ADDR'],
-                int(CONFIG.mail['PORT']),
-                CONFIG.mail['USER'],
-                CONFIG.mail['PASSWD'])
+                self.config.mail['ADDR'],
+                int(self.config.mail['PORT']),
+                self.config.mail['USER'],
+                self.config.mail['PASSWD'])
 
             email = EMail(subject, sender, recipient, plain=message)
             self.logger.info(
