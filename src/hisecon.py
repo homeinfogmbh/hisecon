@@ -124,6 +124,8 @@ class Hisecon(WsgiApp):
             self.logger.debug('Got plain text: {0}'.format(body_plain))
             body_plain = unquote(body_plain)
             self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
+            body_plain = body_plain.replace('<br/>', '\n')
+            self.logger.debug('Translated plain text: {0}'.format(body_plain))
 
         body_html = qd.get('body_html')
 
