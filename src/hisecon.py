@@ -225,7 +225,7 @@ class Hisecon(WsgiApp):
     get = post
 
     def _send_mail(self, sender, recipients, subject,
-                   body_html=body_html, body_plain=body_plain)
+                   body_html=body_html, body_plain=body_plain):
         """Actually sends emails"""
         mailer = Mailer(
             self.config.mail['ADDR'],
