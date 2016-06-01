@@ -95,7 +95,7 @@ class Hisecon(WsgiApp):
             return s
 
     @property
-    def configurations(self):
+    def configs(self):
         """Loads the configurations dictionary"""
         try:
             configs_dict = loads(self.configs_text)
