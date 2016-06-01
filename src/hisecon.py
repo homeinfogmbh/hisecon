@@ -85,15 +85,18 @@ class Hisecon(WsgiApp):
         except FileNotFoundError:
             self.logger.error('Secrets file not found: {}'.format(
                 self.SECRETS_FILE))
+            return sites
         except PermissionError:
             self.logger.error('Secrets file "{}" could not be opened'.format(
                 self.SECRETS_FILE))
+            return sites
 
         try:
             sites_dict = loads(s)
         except ValueError:
             self.logger.error('Secrets file "{}" has invalid content'.format(
                 self.SECRETS_FILE))
+            return sites
         else:
             try:
                 sites_list = sites_dict['sites']
@@ -124,6 +127,8 @@ class Hisecon(WsgiApp):
                         secret,
                         recipients=recipients,
                         sender=sender)
+
+        return sites
 
     def post(self, environ):
         """Handles POST requests
