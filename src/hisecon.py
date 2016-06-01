@@ -15,6 +15,34 @@ from homeinfo.lib.wsgi import Error, InternalServerError, WsgiApp
 __all__ = ['Hisecon']
 
 
+class ReCaptcha():
+    """Re captcha wrapper"""
+
+    VERIFICATION_URL = 'https://www.google.com/recaptcha/api/siteverify'
+
+    def __init__(self, secret, response, remoteip=None):
+        """Sets basic reCAPTCHA data"""
+        self.secret = secret
+        self.response = response
+        self.remoteip = remoteip
+
+    def __bool__(self):
+        """Verifies reCAPTCHA data"""
+        return self.verify()
+
+    def verify(self):
+        """Verifies reCAPTCHA data"""
+        params = {'secret': secret, 'response': response}
+
+        if remoteip is not None:
+            params['remoteip'] = remoteip
+
+        response = post(self.VERIFICATION_URL, params=params)
+        response_dict = loads(response.text)
+
+        return response_dict.get('success', False) is True
+
+
 class HiseconConfig(Configuration):
     """Configuration parser for hisecon"""
 
@@ -33,8 +61,6 @@ class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
     DEBUG = True
-
-    RE_CAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
     def __init__(self, cors=None, date_format=None):
         super().__init__(cors=cors, date_format=date_format)
@@ -82,51 +108,42 @@ class Hisecon(WsgiApp):
             self.logger.warning(msg)
             return Error(msg, status=400)
 
-        if self._check_recpatcha(secret, response, remoteip=remoteip):
-            self.logger.info('Got valid reCAPTCHA')
-            mailer = Mailer(
-                self.config.mail['ADDR'],
-                int(self.config.mail['PORT']),
-                self.config.mail['USER'],
-                self.config.mail['PASSWD'])
-
-            email = EMail(subject, sender, recipient, plain=message)
-            self.logger.info(
-                'Created email from "{sender}" to "{recipient}" with subject '
-                '"{subject}" and content "{content}"'.format(
-                    sender=sender,
-                    recipient=recipient,
-                    subject=subject,
-                    content=message))
-
-            try:
-                mailer.send([email])
-            except Exception:
-                self.logger.critical('Could not send mail')
-            else:
-                self.logger.info('Mail sent')
-        else:
-            msg = 'reCAPTCHA check failed'
-            self.logger.error(msg)
-            return Error(msg, status=400)
-
-    # XXX: Debug!
-    get = post
-
-    def _check_recpatcha(self, secret, response, remoteip=None):
-        """Verifies Google reCAPTCHA credentials"""
-        params = {'secret': secret, 'response': response}
-
-        if remoteip is not None:
-            params['remoteip'] = remoteip
-
-        response = post(self.RE_CAPTCHA_URL, params=params)
-
         try:
-            response_dict = loads(response.text)
+            if ReCaptcha(secret, response, remoteip=remoteip):
+                self.logger.info('Got valid reCAPTCHA')
+                self._send_mail(sender, recipient, subject, message)
+            else:
+                msg = 'reCAPTCHA check failed'
+                self.logger.error(msg)
+                return Error(msg, status=400)
         except ValueError:
             msg = 'Could not parse JSON response of reCAPTCHA'
             self.logger.error(msg)
             return InternalServerError(msg)
 
-        return response_dict.get('success', False) is True
+    # Allow GET and POST requests
+    get = post
+
+    def _send_mail(self, sender, recipient, subject, message):
+        """Actually sends emails"""
+        mailer = Mailer(
+            self.config.mail['ADDR'],
+            int(self.config.mail['PORT']),
+            self.config.mail['USER'],
+            self.config.mail['PASSWD'])
+
+        email = EMail(subject, sender, recipient, plain=message)
+        self.logger.info(
+            'Created email from "{sender}" to "{recipient}" with subject '
+            '"{subject}" and content "{content}"'.format(
+                sender=sender,
+                recipient=recipient,
+                subject=subject,
+                content=message))
+
+        try:
+            mailer.send([email])
+        except Exception:
+            self.logger.critical('Could not send mail')
+        else:
+            self.logger.info('Mail sent')
