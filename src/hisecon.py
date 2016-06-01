@@ -62,8 +62,8 @@ class Hisecon(WsgiApp):
 
     DEBUG = True
 
-    def __init__(self, cors=None, date_format=None):
-        super().__init__(cors=cors, date_format=date_format)
+    def __init__(self, date_format=None):
+        super().__init__(cors=True, date_format=date_format)
         self.logger = getLogger(name=self.__class__.__name__.upper())
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
 
