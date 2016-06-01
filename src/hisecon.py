@@ -5,6 +5,7 @@ and a token system to authenticate calling sites.
 """
 from logging import getLogger
 from json import loads
+from urllib.parse import unquote
 
 from requests import post
 
@@ -119,7 +120,14 @@ class Hisecon(WsgiApp):
         remoteip = qd.get('remoteip')
         issuer = qd.get('issuer')
         body_plain = qd.get('body_plain')
+
+        if body_plain:
+            body_plain = unquote(body_plain)
+
         body_html = qd.get('body_html')
+
+        if body_html:
+            body_html = unquote(body_html)
 
         try:
             config = qd.get('config')
@@ -170,6 +178,8 @@ class Hisecon(WsgiApp):
             msg = 'No subject provided'
             self.logger.warning(msg)
             return Error(msg, status=400)
+        else:
+            subject = unquote(subject)
 
         if not body_plain and not body_html:
             msg = 'No message provided'
