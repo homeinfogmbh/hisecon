@@ -52,14 +52,19 @@ class HiseconConfig(Configuration):
         return self['mail']
 
 
-class DomainConfig():
+class ConfigEntry():
     """Domain configuration wrapper"""
 
-    def __init__(self, domain, secret, recipients=None, sender=None):
+    def __init__(self, domain, secret, recipients=None, sender=None,
+                 host=None, user=None, passwd=None, port=None):
         self.domain = domain
         self.secret = secret
         self.recipients = recipients
         self.sender = sender
+        self.host = host
+        self.user = user
+        self.passwd = passwd
+        self.port = port
 
 
 class Hisecon(WsgiApp):
@@ -75,58 +80,31 @@ class Hisecon(WsgiApp):
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
 
     @property
-    def domains(self):
-        """Returns available domain configurations"""
-        sites = {}
-
+    def configs_text(self):
+        """Loads the text from the configurations file"""
         try:
             with open(self.SECRETS_FILE) as f:
                 s = f.read()
         except FileNotFoundError:
             self.logger.error('Secrets file not found: {}'.format(
                 self.SECRETS_FILE))
-            return sites
         except PermissionError:
             self.logger.error('Secrets file "{}" could not be opened'.format(
                 self.SECRETS_FILE))
-            return sites
+        else:
+            return s
 
+    @property
+    def configurations(self):
+        """Loads the configurations dictionary"""
         try:
-            sites_dict = loads(s)
+            configs_dict = loads(self.configs_text)
         except ValueError:
             self.logger.error('Secrets file "{}" has invalid content'.format(
                 self.SECRETS_FILE))
-            return sites
+            return {}
         else:
-            try:
-                sites_list = sites_dict['sites']
-            except KeyError:
-                self.logger.error('No sites configured')
-                return sites
-
-            for site_element in sites_list:
-                try:
-                    domain = site_element['domain']
-                    secret = site_element['secret']
-                except KeyError:
-                    self.logger.error('Could not lookup domain and / or '
-                        'secret for {}'.format(site_element))
-                else:
-                    try:
-                        recipients = site_element['recipients']
-                    except KeyError:
-                        recipients = None
-
-                    try:
-                        sender = site_element['sender']
-                    except KeyError:
-                        sender = None
-
-                    sites[domain] = DomainConfig(
-                        domain,
-                        secret,
-                        recipients=recipients,
-                        sender=sender)
+            return configs_dict
 
         return sites
 
@@ -155,23 +133,39 @@ class Hisecon(WsgiApp):
 
         remoteip = qd.get('remoteip')
         issuer = qd.get('issuer')
-        copy2issuer = True if qd.get('copy2issuer') else False
         body_plain = qd.get('body_plain')
         body_html = qd.get('body_html')
 
         try:
-            domain = qd.get('domain')
+            config = qd.get('config')
         except KeyError:
-            msg = 'No domain provided'
+            msg = 'No configuration provided'
             self.logger.warning(msg)
             return Error(msg, status=400)
         else:
             try:
-                domain_config = self.domains[domain]
+                cfgd = self.configs[config]
             except KeyError:
-                msg = 'Invalid domain: {}'.format(domain)
+                msg = 'Invalid domain: {}'.format(config)
                 self.logger.warning(msg)
                 return Error(msg, status=400)
+
+        host = cfgd.get('host') or self.config.mail['ADDR']
+
+        try:
+            port = int(cfgd.get('port'))
+        except (TypeError, ValueError):
+            port = int(self.config.mail['PORT'])
+
+        smtp_user = cfgd.get('smtp_user') or self.config.mail['USER']
+        smtp_passwd = cfgd.get('smtp_passwd') or self.config.mail['PASSWD']
+
+        try:
+            secret = cfgd['secret']
+        except KeyError:
+            msg = 'No secret specified for configuration'
+            self.logger.critical(msg)
+            return InternalServerError(msg)
 
         try:
             response = qd['response']
@@ -183,9 +177,7 @@ class Hisecon(WsgiApp):
         try:
             recipient = qd['recipient']
         except KeyError:
-            msg = 'No recipient email address provided'
-            self.logger.warning(msg)
-            return Error(msg, status=400)
+            recipient = None
 
         try:
             subject = qd['subject']
@@ -200,18 +192,33 @@ class Hisecon(WsgiApp):
             return Error(msg, status=400)
 
         try:
-            if ReCaptcha(domain_config.secret, response, remoteip=remoteip):
+            if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
 
-                sender = domain_config.sender or self.config.mail['FROM']
-                recipients = domain_config.recipients or []
+                mailer = Mailer(host, port, user, passwd)
+                sender = cfgd.get('sender') or self.config.mail['FROM']
+                recipients = cfgd.get('recipients') or []
 
-                if copy2issuer and issuer:
+                if recipient:
+                    recipients.append(recipient)
+
+                if issuer:
                     recipients.append(issuer)
 
-                return self._send_mail(
+                emails = self._emails(
                     sender, recipients, subject,
                     body_html=body_html, body_plain=body_plain)
+
+                try:
+                    mailer.send(emails)
+                except Exception:
+                    msg = 'Could not send emails'
+                    self.logger.critical(msg)
+                    return InternalServerError(msg)
+                else:
+                    msg = 'Emails sent'
+                    self.logger.info(msg)
+                    return OK(msg)
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
@@ -224,17 +231,9 @@ class Hisecon(WsgiApp):
     # Allow GET and POST requests
     get = post
 
-    def _send_mail(self, sender, recipients, subject,
-                   body_html=None, body_plain=None):
+    def _emails(self, mailer, sender, recipients, subject,
+                body_html=None, body_plain=None):
         """Actually sends emails"""
-        mailer = Mailer(
-            self.config.mail['ADDR'],
-            int(self.config.mail['PORT']),
-            self.config.mail['USER'],
-            self.config.mail['PASSWD'])
-
-        emails = []
-
         for recipient in recipients:
             email = EMail(
                 subject, sender, recipient,
@@ -248,15 +247,4 @@ class Hisecon(WsgiApp):
                     subject=subject,
                     body_plain=body_plain,
                     body_html=body_html))
-            emails.append(email)
-
-        try:
-            mailer.send(emails)
-        except Exception:
-            msg = 'Could not send mail'
-            self.logger.critical(msg)
-            return InternalServerError(msg)
-        else:
-            msg = 'Mail sent'
-            self.logger.info(msg)
-            return OK(msg)
+            yield email
