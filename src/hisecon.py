@@ -10,7 +10,7 @@ from requests import post
 
 from homeinfo.lib.config import Configuration
 from homeinfo.lib.mail import Mailer, EMail
-from homeinfo.lib.wsgi import Error, InternalServerError, WsgiApp
+from homeinfo.lib.wsgi import OK, Error, InternalServerError, WsgiApp
 
 __all__ = ['Hisecon']
 
