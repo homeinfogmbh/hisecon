@@ -49,12 +49,17 @@ class HiseconConfig(Configuration):
     @property
     def mail(self):
         """Returns the mail section"""
-        return self['mail']
+        return self['mail']]
 
-    @property
-    def recaptcha(self):
-        """Returns the reCAPTCHA section"""
-        return self['recaptcha']
+
+class DomainConfig():
+    """Domain configuration wrapper"""
+
+    def __init__(self, domain, secret, recipients=None, sender=None):
+        self.domain = domain
+        self.secret = secret
+        self.recipients = recipients
+        self.sender = sender
 
 
 class Hisecon(WsgiApp):
@@ -62,24 +67,106 @@ class Hisecon(WsgiApp):
 
     DEBUG = True
 
+    SECRETS_FILE = '/etc/hisecon.domains'
+
     def __init__(self, date_format=None):
         super().__init__(cors=True, date_format=date_format)
         self.logger = getLogger(name=self.__class__.__name__.upper())
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
 
+    @property
+    def domains(self):
+        """Returns available domain configurations"""
+        sites = {}
+
+        try:
+            with open(self.SECRETS_FILE) as f:
+                s = f.read()
+        except FileNotFoundError:
+            self.logger.error('Secrets file not found: {}'.format(
+                self.SECRETS_FILE))
+        except PermissionError:
+            self.logger.error('Secrets file "{}" could not be opened'.format(
+                self.SECRETS_FILE))
+
+        try:
+            sites_dict = loads(s)
+        except ValueError:
+            self.logger.error('Secrets file "{}" has invalid content'.format(
+                self.SECRETS_FILE))
+        else:
+            try:
+                sites_list = sites_dict['sites']
+            except KeyError:
+                self.logger.error('No sites configured')
+                return sites
+
+            for site_element in sites_list:
+                try:
+                    domain = site_element['domain']
+                    secret = site_element['secret']
+                except KeyError:
+                    self.logger.error('Could not lookup domain and / or '
+                        'secret for {}'.format(site_element))
+                else:
+                    try:
+                        recipients = site_element['recipients']
+                    except KeyError:
+                        recipients = None
+
+                    try:
+                        sender = site_element['sender']
+                    except KeyError:
+                        sender = None
+
+                    sites[domain] = DomainConfig(
+                        domain,
+                        secret,
+                        recipients=recipients,
+                        sender=sender)
+
     def post(self, environ):
-        """Handles POST requests"""
+        """Handles POST requests
+
+        Required params:
+            domain
+            response
+            recipient
+            subject
+
+        Optional params:
+            sender
+            remoteip
+            issuer
+            copy2issuer
+            body_plain
+            body_html
+        """
         query_string = self.query_string(environ)
         self.logger.debug(query_string)
 
         qd = self.qd(query_string)
         self.logger.debug(str(qd))
 
-        sender = qd.get('sender') or self.config.mail['FROM']
+        remoteip = qd.get('remoteip')
+        issuer = qd.get('issuer')
         copy2issuer = True if qd.get('copy2issuer') else False
-        reply_email = qd.get('reply_email')
+        body_plain = qd.get('body_plain')
+        body_html = qd.get('body_html')
 
-        secret = self.config.recaptcha['SECRET']
+        try:
+            domain = qd.get('domain')
+        except KeyError:
+            msg = 'No domain provided'
+            self.logger.warning(msg)
+            return Error(msg, status=400)
+        else:
+            try:
+                domain_config = self.domains[domain]
+            except KeyError:
+                msg = 'Invalid domain: {}'.format(domain)
+                self.logger.warning(msg)
+                return Error(msg, status=400)
 
         try:
             response = qd['response']
@@ -87,8 +174,6 @@ class Hisecon(WsgiApp):
             msg = 'No reCAPTCHA response provided'
             self.logger.warning(msg)
             return Error(msg, status=400)
-
-        remoteip = qd.get('remoteip')
 
         try:
             recipient = qd['recipient']
@@ -104,17 +189,24 @@ class Hisecon(WsgiApp):
             self.logger.warning(msg)
             return Error(msg, status=400)
 
-        try:
-            message = qd['message']
-        except KeyError:
+        if not body_plain and not body_html:
             msg = 'No message provided'
             self.logger.warning(msg)
             return Error(msg, status=400)
 
         try:
-            if ReCaptcha(secret, response, remoteip=remoteip):
+            if ReCaptcha(domain_config.secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
-                return self._send_mail(sender, recipient, subject, message)
+
+                sender = domain_config.sender or self.config.mail['FROM']
+                recipients = domain_config.recipients or []
+
+                if copy2issuer and issuer:
+                    recipients.append(issuer)
+
+                return self._send_mail(
+                    sender, recipients, subject,
+                    body_html=body_html, body_plain=body_plain)
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
@@ -127,7 +219,8 @@ class Hisecon(WsgiApp):
     # Allow GET and POST requests
     get = post
 
-    def _send_mail(self, sender, recipient, subject, message):
+    def _send_mail(self, sender, recipients, subject,
+                   body_html=body_html, body_plain=body_plain)
         """Actually sends emails"""
         mailer = Mailer(
             self.config.mail['ADDR'],
@@ -135,17 +228,25 @@ class Hisecon(WsgiApp):
             self.config.mail['USER'],
             self.config.mail['PASSWD'])
 
-        email = EMail(subject, sender, recipient, plain=message)
-        self.logger.info(
-            'Created email from "{sender}" to "{recipient}" with subject '
-            '"{subject}" and content "{content}"'.format(
-                sender=sender,
-                recipient=recipient,
-                subject=subject,
-                content=message))
+        emails = []
+
+        for recipient in recipients:
+            email = EMail(
+                subject, sender, recipient,
+                plain=body_plain, html=body_html)
+            self.logger.debug(
+                'Created email from "{sender}" to "{recipient}" with subject '
+                '"{subject}" and plain content "{body_plain}" and HTML content '
+                '"{body_html}"'.format(
+                    sender=sender,
+                    recipient=recipient,
+                    subject=subject,
+                    body_plain=body_plain,
+                    body_html=body_html))
+            emails.append(email)
 
         try:
-            mailer.send([email])
+            mailer.send(emails)
         except Exception:
             msg = 'Could not send mail'
             self.logger.critical(msg)
