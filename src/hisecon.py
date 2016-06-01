@@ -32,10 +32,10 @@ class ReCaptcha():
 
     def verify(self):
         """Verifies reCAPTCHA data"""
-        params = {'secret': secret, 'response': response}
+        params = {'secret': self.secret, 'response': self.response}
 
-        if remoteip is not None:
-            params['remoteip'] = remoteip
+        if self.remoteip is not None:
+            params['remoteip'] = self.remoteip
 
         response = post(self.VERIFICATION_URL, params=params)
         response_dict = loads(response.text)
