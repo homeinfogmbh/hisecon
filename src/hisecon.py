@@ -111,7 +111,7 @@ class Hisecon(WsgiApp):
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
-                self._send_mail(sender, recipient, subject, message)
+                return self._send_mail(sender, recipient, subject, message)
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
@@ -144,6 +144,10 @@ class Hisecon(WsgiApp):
         try:
             mailer.send([email])
         except Exception:
-            self.logger.critical('Could not send mail')
+            msg = 'Could not send mail'
+            self.logger.critical(msg)
+            return InternalServerError(msg)
         else:
-            self.logger.info('Mail sent')
+            msg = 'Mail sent'
+            self.logger.info(msg)
+            return OK(msg)
