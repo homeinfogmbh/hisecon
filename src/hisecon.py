@@ -216,7 +216,7 @@ class Hisecon(WsgiApp):
     # Allow GET and POST requests
     get = post
 
-    def _emails(self, mailer, sender, recipients, subject,
+    def _emails(self, sender, recipients, subject,
                 body_html=None, body_plain=None):
         """Actually sends emails"""
         for recipient in recipients:
