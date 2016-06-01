@@ -23,6 +23,11 @@ class HiseconConfig(Configuration):
         """Returns the mail section"""
         return self['mail']
 
+    @property
+    def recaptcha(self):
+        """Returns the reCAPTCHA section"""
+        return self['recaptcha']
+
 
 CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
 
@@ -47,12 +52,7 @@ class Hisecon(WsgiApp):
         copy2issuer = True if qd.get('copy2issuer') else False
         reply_email = qd.get('reply_email')
 
-        try:
-            secret = qd['secret']
-        except KeyError:
-            msg = 'No reCAPTCHA secret provided'
-            self.logger.warning(msg)
-            return Error(msg, status=400)
+        secret = CONFIG.recaptcha['SECRET']
 
         try:
             response = qd['response']
