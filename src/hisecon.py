@@ -38,7 +38,7 @@ class Hisecon(WsgiApp):
 
     def __init__(self, cors=None, date_format=None):
         super().__init__(cors=cors, date_format=date_format)
-        self.logger = getLogger(name=self.__class__.__name__)
+        self.logger = getLogger(name=self.__class__.__name__.upper())
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
 
     def post(self, environ):
