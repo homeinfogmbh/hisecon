@@ -52,21 +52,6 @@ class HiseconConfig(Configuration):
         return self['mail']
 
 
-class ConfigEntry():
-    """Domain configuration wrapper"""
-
-    def __init__(self, domain, secret, recipients=None, sender=None,
-                 host=None, user=None, passwd=None, port=None):
-        self.domain = domain
-        self.secret = secret
-        self.recipients = recipients
-        self.sender = sender
-        self.host = host
-        self.user = user
-        self.passwd = passwd
-        self.port = port
-
-
 class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
@@ -150,12 +135,12 @@ class Hisecon(WsgiApp):
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
-        host = cfgd.get('host') or self.config.mail['ADDR']
+        smtp_host = cfgd.get('host') or self.config.mail['ADDR']
 
         try:
-            port = int(cfgd.get('port'))
+            smtp_port = int(cfgd.get('port'))
         except (TypeError, ValueError):
-            port = int(self.config.mail['PORT'])
+            smtp_port = int(self.config.mail['PORT'])
 
         smtp_user = cfgd.get('smtp_user') or self.config.mail['USER']
         smtp_passwd = cfgd.get('smtp_passwd') or self.config.mail['PASSWD']
@@ -195,7 +180,7 @@ class Hisecon(WsgiApp):
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
 
-                mailer = Mailer(host, port, user, passwd)
+                mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd)
                 sender = cfgd.get('sender') or self.config.mail['FROM']
                 recipients = cfgd.get('recipients') or []
 
