@@ -70,7 +70,10 @@ class Hisecon(WsgiApp):
     def post(self, environ):
         """Handles POST requests"""
         query_string = self.query_string(environ)
+        self.logger.debug(query_string)
+
         qd = self.qd(query_string)
+        self.logger.debug(str(qd))
 
         sender = qd.get('sender') or self.config.mail['FROM']
         copy2issuer = True if qd.get('copy2issuer') else False
