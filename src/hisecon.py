@@ -195,7 +195,12 @@ class Hisecon(WsgiApp):
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
 
-                mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd)
+                mailer = Mailer(
+                    smtp_host,
+                    smtp_port,
+                    smtp_user,
+                    smtp_passwd,
+                    logger=self.logger)
                 sender = cfgd.get('smtp_from') or self.config.mail['FROM']
                 recipients = cfgd.get('recipients') or []
 
