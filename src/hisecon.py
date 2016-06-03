@@ -181,6 +181,7 @@ class Hisecon(WsgiApp):
                     smtp_port,
                     smtp_user,
                     smtp_passwd,
+                    allow_insecure=True,
                     logger=self.logger)
                 sender = cfgd.get('smtp_from') or self.config.mail['FROM']
                 recipients = cfgd.get('recipients') or []
