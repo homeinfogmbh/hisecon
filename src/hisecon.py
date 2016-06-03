@@ -172,11 +172,6 @@ class Hisecon(WsgiApp):
         else:
             subject = unquote(subject)
 
-        if not body_plain and not body_html:
-            msg = 'No message provided'
-            self.logger.warning(msg)
-            return Error(msg, status=400)
-
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
@@ -203,6 +198,11 @@ class Hisecon(WsgiApp):
                     self.logger.error(msg)
                     return Error(msg, status=400)
                 else:
+                    if not body_plain and not body_html:
+                        msg = 'No message provided'
+                        self.logger.warning(msg)
+                        return Error(msg, status=400)
+
                     emails = self._emails(
                         sender, recipients, subject,
                         body_html=body_html, body_plain=body_plain)
@@ -246,18 +246,19 @@ class Hisecon(WsgiApp):
 
     def _get_text(self, environ, html=False):
         """Get message text"""
+        body_html = None
+        body_plain = None
+
         fh = self.file(environ)
         data = fh.read()
         text = data.decode()
 
         if html:
             body_html = text
-            body_plain = None
             self.logger.debug('Got HTML text: {0}'.format(body_html))
             body_html = unquote(text)
             self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
         else:
-            body_html = None
             body_plain = text
             self.logger.debug('Got plain text: {0}'.format(body_plain))
             body_plain = unquote(body_plain)
