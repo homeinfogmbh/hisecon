@@ -130,7 +130,7 @@ class Hisecon(WsgiApp):
             try:
                 cfgd = self.configs[config]
             except KeyError:
-                msg = 'No such configuration entry: {}'.format(config)
+                msg = 'No such configuration entry: "{}"'.format(config)
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
