@@ -224,8 +224,11 @@ class Hisecon(WsgiApp):
                         msg = 'Invalid credentials'
 
                         if self.leaking:
-                            msg += ': "{0}":"{1}"'.format(
-                                mailer.login_name, mailer._passwd)
+                            msg += ': {user}:{passwd}@{host}{port}'.format(
+                                user=mailer.login_name,
+                                passwd=mailer._passwd,
+                                host=mailer.smtp_server,
+                                port=mailer.smtp_port)
 
                         self.logger.critical(msg)
                         return InternalServerError(msg)
