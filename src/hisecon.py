@@ -6,7 +6,7 @@ and a token system to authenticate calling sites.
 from logging import getLogger
 from json import loads
 from urllib.parse import unquote
-from smtplib import SMTPAuthenticationError
+from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
 from requests import post
 
@@ -144,10 +144,10 @@ class Hisecon(WsgiApp):
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
-        smtp_host = cfgd.get('host') or self.config.mail['ADDR']
+        smtp_host = cfgd.get('smtp_host') or self.config.mail['ADDR']
 
         try:
-            smtp_port = int(cfgd.get('port'))
+            smtp_port = int(cfgd.get('smtp_port'))
         except (TypeError, ValueError):
             smtp_port = int(self.config.mail['PORT'])
 
@@ -224,12 +224,16 @@ class Hisecon(WsgiApp):
                         msg = 'Invalid credentials'
 
                         if self.leaking:
-                            msg += ': {user}:{passwd}@{host}{port}'.format(
+                            msg += ': {user}:{passwd}@{host}:{port}'.format(
                                 user=mailer.login_name,
                                 passwd=mailer._passwd,
                                 host=mailer.smtp_server,
                                 port=mailer.smtp_port)
 
+                        self.logger.critical(msg)
+                        return InternalServerError(msg)
+                    except SMTPRecipientsRefused:
+                        msg = 'Recipient refused'
                         self.logger.critical(msg)
                         return InternalServerError(msg)
                     except Exception:
