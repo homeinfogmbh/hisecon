@@ -196,7 +196,7 @@ class Hisecon(WsgiApp):
                 self.logger.info('Got valid reCAPTCHA')
 
                 mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd)
-                sender = cfgd.get('sender') or self.config.mail['FROM']
+                sender = cfgd.get('smtp_from') or self.config.mail['FROM']
                 recipients = cfgd.get('recipients') or []
 
                 if recipient:
@@ -239,9 +239,9 @@ class Hisecon(WsgiApp):
                 subject, sender, recipient,
                 plain=body_plain, html=body_html)
             self.logger.debug(
-                'Created email from "{sender}" to "{recipient}" with subject '
-                '"{subject}" and plain content "{body_plain}" and HTML content '
-                '"{body_html}"'.format(
+                'Created email from "{sender}" to "{recipient}" '
+                'with subject "{subject}" and plain content '
+                '"{body_plain}" and HTML content "{body_html}"'.format(
                     sender=sender,
                     recipient=recipient,
                     subject=subject,
