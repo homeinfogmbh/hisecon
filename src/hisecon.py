@@ -244,9 +244,8 @@ class Hisecon(WsgiApp):
                     body_html=body_html))
             yield email
 
-
-     def _get_text(self, environ, html=False):
-         """Get message text"""
+    def _get_text(self, environ, html=False):
+        """Get message text"""
         fh = self.file(environ)
         data = fh.read()
         text = data.decode()
