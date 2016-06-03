@@ -58,7 +58,6 @@ class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
     DEBUG = True
-    YES_I_REALLY_LEAK_CREDENTIALS = True
 
     SECRETS_FILE = '/etc/hisecon.domains'
 
@@ -95,14 +94,6 @@ class Hisecon(WsgiApp):
             return configs_dict
 
         return sites
-
-    @property
-    def leaking(self):
-        """XXX: Credentials leakage for real debug"""
-        try:
-            return self.YES_I_REALLY_LEAK_CREDENTIALS
-        except AttributeError:
-            return False
 
     def post(self, environ):
         """Handles POST requests
@@ -222,14 +213,6 @@ class Hisecon(WsgiApp):
                         mailer.send(emails, fg=True)
                     except SMTPAuthenticationError:
                         msg = 'Invalid credentials'
-
-                        if self.leaking:
-                            msg += ': {user}:{passwd}@{host}:{port}'.format(
-                                user=mailer.login_name,
-                                passwd=mailer._passwd,
-                                host=mailer.smtp_server,
-                                port=mailer.smtp_port)
-
                         self.logger.critical(msg)
                         return InternalServerError(msg)
                     except SMTPRecipientsRefused:
