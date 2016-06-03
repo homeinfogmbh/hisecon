@@ -7,7 +7,6 @@ from logging import getLogger
 from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
-from ssl import SSLError
 
 from requests import post
 
@@ -218,36 +217,11 @@ class Hisecon(WsgiApp):
                         msg = 'No message provided'
                         self.logger.warning(msg)
                         return Error(msg, status=400)
-
-                    emails = self._emails(
-                        sender, recipients, subject,
-                        body_html=body_html, body_plain=body_plain)
-
-                    try:
-                        mailer.send(emails, fg=True)
-                    except SMTPAuthenticationError:
-                        msg = 'Invalid credentials'
-                        self.logger.critical(msg)
-                        return InternalServerError(msg)
-                    except SMTPRecipientsRefused:
-                        msg = 'Recipient refused'
-                        self.logger.critical(msg)
-                        return InternalServerError(msg)
-                    except SSLError:
-                        msg = 'Cannot connect to mail server'
-                        self.logger.critical(msg)
-                        return InternalServerError(msg)
-                    except Exception:
-                        if self.debug:
-                            raise
-                        else:
-                            msg = 'Unknown error'
-                            self.logger.critical(msg)
-                            return InternalServerError(msg)
                     else:
-                        msg = 'Emails sent'
-                        self.logger.info(msg)
-                        return OK(msg)
+                        emails = self._emails(
+                            sender, recipients, subject,
+                            body_html=body_html, body_plain=body_plain)
+                        return self._send_mails()
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
@@ -298,3 +272,27 @@ class Hisecon(WsgiApp):
             self.logger.debug('Translated plain text: {0}'.format(body_plain))
 
         return (body_html, body_plain)
+
+    def _send_mails(self, emails):
+        """Actually send emails"""
+        try:
+            mailer.send(emails, fg=True)
+        except SMTPAuthenticationError:
+            msg = 'Invalid credentials'
+            self.logger.critical(msg)
+            return InternalServerError(msg)
+        except SMTPRecipientsRefused:
+            msg = 'Recipient refused'
+            self.logger.critical(msg)
+            return InternalServerError(msg)
+        except Exception:
+            if self.debug:
+                raise
+            else:
+                msg = 'Unknown error'
+                self.logger.critical(msg)
+                return InternalServerError(msg)
+        else:
+            msg = 'Emails sent'
+            self.logger.info(msg)
+            return OK(msg)
