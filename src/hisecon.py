@@ -189,22 +189,25 @@ class Hisecon(WsgiApp):
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
-
-                mailer = Mailer(
-                    smtp_host,
-                    smtp_port,
-                    smtp_user,
-                    smtp_passwd,
-                    allow_insecure=True,
-                    logger=self.logger)
                 sender = cfgd.get('smtp_from') or self.config.mail['FROM']
+                self.logger.debug('Got sender: {}'.format(sender))
                 recipients = cfgd.get('recipients') or []
+                self.logger.debug('Got recipients: {}'.format(recipients))
+
+                mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd,
+                                allow_insecure=True, logger=self.logger)
 
                 if recipient:
                     recipients.append(recipient)
+                    self.logger.debug('Added recipient: {}'.format(recipient))
 
                 if issuer:
                     recipients.append(issuer)
+                    self.logger.debug('Added issuer: {}'.format(issuer))
+
+                if recipient or issuer:
+                    self.logger.debug('Updated recipients: {}'.format(
+                        recipients)
 
                 try:
                     body_html, body_plain = self._get_text(environ, html=html)
@@ -273,7 +276,7 @@ class Hisecon(WsgiApp):
 
         return (body_html, body_plain)
 
-    def _send_mails(self, emails):
+    def _send_mails(self, mailer, emails):
         """Actually send emails"""
         try:
             mailer.send(emails, fg=True)
