@@ -6,6 +6,7 @@ and a token system to authenticate calling sites.
 from logging import getLogger
 from json import loads
 from urllib.parse import unquote
+from smtplib import SMTPAuthenticationError
 
 from requests import post
 
@@ -57,6 +58,7 @@ class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
     DEBUG = True
+    YES_I_REALLY_LEAK_CREDENTIALS = True
 
     SECRETS_FILE = '/etc/hisecon.domains'
 
@@ -93,6 +95,14 @@ class Hisecon(WsgiApp):
             return configs_dict
 
         return sites
+
+    @property
+    def leaking(self):
+        """XXX: Credentials leakage for real debug"""
+        try:
+            return self.YES_I_REALLY_LEAK_CREDENTIALS
+        except AttributeError:
+            return False
 
     def post(self, environ):
         """Handles POST requests
@@ -210,13 +220,19 @@ class Hisecon(WsgiApp):
 
                     try:
                         mailer.send(emails, fg=True)
+                    except SMTPAuthenticationError:
+                        msg = 'Invalid credentials'
+
+                        if self.leaking:
+                            msg += ': "{0}":"{1}"'.format(
+                                mailer.login_name, mailer._passwd)
+
+                        self.logger.critical(msg)
+                        return InternalServerError(msg)
                     except Exception:
-                        if self.debug:
-                            raise
-                        else:
-                            msg = 'Could not send emails'
-                            self.logger.critical(msg)
-                            return InternalServerError(msg)
+                        msg = 'Unknown error'
+                        self.logger.critical(msg)
+                        return InternalServerError(msg)
                     else:
                         msg = 'Emails sent'
                         self.logger.info(msg)
