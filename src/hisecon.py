@@ -221,9 +221,9 @@ class Hisecon(WsgiApp):
                         self.logger.warning(msg)
                         return Error(msg, status=400)
                     else:
-                        emails = self._emails(
+                        emails = [email for email in self._emails(
                             sender, recipients, subject,
-                            body_html=body_html, body_plain=body_plain)
+                            body_html=body_html, body_plain=body_plain)]
                         return self._send_mails(mailer, emails)
             else:
                 msg = 'reCAPTCHA check failed'
@@ -278,6 +278,8 @@ class Hisecon(WsgiApp):
 
     def _send_mails(self, mailer, emails):
         """Actually send emails"""
+        self.logger.debug('Sending emails')
+
         try:
             mailer.send(emails, fg=True)
         except SMTPAuthenticationError:
