@@ -237,9 +237,12 @@ class Hisecon(WsgiApp):
                         self.logger.critical(msg)
                         return InternalServerError(msg)
                     except Exception:
-                        msg = 'Unknown error'
-                        self.logger.critical(msg)
-                        return InternalServerError(msg)
+                        if self.debug:
+                            raise
+                        else:
+                            msg = 'Unknown error'
+                            self.logger.critical(msg)
+                            return InternalServerError(msg)
                     else:
                         msg = 'Emails sent'
                         self.logger.info(msg)
