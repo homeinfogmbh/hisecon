@@ -118,8 +118,11 @@ class Hisecon(WsgiApp):
         self.logger.debug(str(qd))
 
         remoteip = qd.get('remoteip')
+        self.logger.debug('Got remote IP: {}'.format(remoteip))
         issuer = qd.get('issuer')
+        self.logger.debug('Got issuer: {}'.format(issuer))
         html = True if qd.get('html') else False
+        self.logger.debug('HTML content is: {}'.format(remoteip))
 
         try:
             config = qd.get('config')
@@ -136,14 +139,18 @@ class Hisecon(WsgiApp):
                 return Error(msg, status=400)
 
         smtp_host = cfgd.get('smtp_host') or self.config.mail['ADDR']
+        self.logger.debug('Got SMTP host: {}'.format(smtp_host))
 
         try:
             smtp_port = int(cfgd.get('smtp_port'))
         except (TypeError, ValueError):
             smtp_port = int(self.config.mail['PORT'])
 
+        self.logger.debug('Got SMTP port: {}'.format(smtp_port))
         smtp_user = cfgd.get('smtp_user') or self.config.mail['USER']
+        self.logger.debug('Got SMTP user: {}'.format(smtp_user))
         smtp_passwd = cfgd.get('smtp_passwd') or self.config.mail['PASSWD']
+        self.logger.debug('Got SMTP passwd: {}'.format(smtp_passwd))
 
         try:
             secret = cfgd['secret']
@@ -158,11 +165,15 @@ class Hisecon(WsgiApp):
             msg = 'No reCAPTCHA response provided'
             self.logger.warning(msg)
             return Error(msg, status=400)
+        else:
+            self.logger.debug('Got reCAPTCHA response: {}'.format(response))
 
         try:
             recipient = qd['recipient']
         except KeyError:
             recipient = None
+
+        self.logger.debug('Got additional recipient: {}'.format(recipient))
 
         try:
             subject = qd['subject']
@@ -171,7 +182,9 @@ class Hisecon(WsgiApp):
             self.logger.warning(msg)
             return Error(msg, status=400)
         else:
+            self.logger.debug('Got subject: {}'.format(subject))
             subject = unquote(subject)
+            self.logger.debug('Got unquoted subject: {}'.format(subject))
 
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
