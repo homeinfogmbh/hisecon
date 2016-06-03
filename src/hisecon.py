@@ -221,7 +221,7 @@ class Hisecon(WsgiApp):
                         emails = self._emails(
                             sender, recipients, subject,
                             body_html=body_html, body_plain=body_plain)
-                        return self._send_mails()
+                        return self._send_mails(emails)
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
