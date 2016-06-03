@@ -118,21 +118,7 @@ class Hisecon(WsgiApp):
 
         remoteip = qd.get('remoteip')
         issuer = qd.get('issuer')
-        body_plain = qd.get('body_plain')
-
-        if body_plain:
-            self.logger.debug('Got plain text: {0}'.format(body_plain))
-            body_plain = unquote(body_plain)
-            self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
-            body_plain = body_plain.replace('<br>', '\n')
-            self.logger.debug('Translated plain text: {0}'.format(body_plain))
-
-        body_html = qd.get('body_html')
-
-        if body_html:
-            self.logger.debug('Got HTML text: {0}'.format(body_html))
-            body_html = unquote(body_html)
-            self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
+        html = True if qd.get('html') else False
 
         try:
             config = qd.get('config')
@@ -210,20 +196,27 @@ class Hisecon(WsgiApp):
                 if issuer:
                     recipients.append(issuer)
 
-                emails = self._emails(
-                    sender, recipients, subject,
-                    body_html=body_html, body_plain=body_plain)
-
                 try:
-                    mailer.send(emails)
-                except Exception:
-                    msg = 'Could not send emails'
-                    self.logger.critical(msg)
-                    return InternalServerError(msg)
+                    body_html, body_plain = self._get_text(environ, html=html)
+                except ValueError:
+                    msg = 'Non-text data received'
+                    self.logger.error(msg)
+                    return Error(msg, status=400)
                 else:
-                    msg = 'Emails sent'
-                    self.logger.info(msg)
-                    return OK(msg)
+                    emails = self._emails(
+                        sender, recipients, subject,
+                        body_html=body_html, body_plain=body_plain)
+
+                    try:
+                        mailer.send(emails)
+                    except Exception:
+                        msg = 'Could not send emails'
+                        self.logger.critical(msg)
+                        return InternalServerError(msg)
+                    else:
+                        msg = 'Emails sent'
+                        self.logger.info(msg)
+                        return OK(msg)
             else:
                 msg = 'reCAPTCHA check failed'
                 self.logger.error(msg)
@@ -232,9 +225,6 @@ class Hisecon(WsgiApp):
             msg = 'Could not parse JSON response of reCAPTCHA'
             self.logger.error(msg)
             return InternalServerError(msg)
-
-    # Allow GET and POST requests
-    get = post
 
     def _emails(self, sender, recipients, subject,
                 body_html=None, body_plain=None):
@@ -253,3 +243,27 @@ class Hisecon(WsgiApp):
                     body_plain=body_plain,
                     body_html=body_html))
             yield email
+
+
+     def _get_text(self, environ, html=False):
+         """Get message text"""
+        fh = self.file(environ)
+        data = fh.read()
+        text = data.decode()
+
+        if html:
+            body_html = text
+            body_plain = None
+            self.logger.debug('Got HTML text: {0}'.format(body_html))
+            body_html = unquote(text)
+            self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
+        else:
+            body_html = None
+            body_plain = text
+            self.logger.debug('Got plain text: {0}'.format(body_plain))
+            body_plain = unquote(body_plain)
+            self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
+            body_plain = body_plain.replace('<br>', '\n')
+            self.logger.debug('Translated plain text: {0}'.format(body_plain))
+
+        return (body_html, body_plain)
