@@ -209,11 +209,14 @@ class Hisecon(WsgiApp):
                         body_html=body_html, body_plain=body_plain)
 
                     try:
-                        mailer.send(emails)
+                        mailer.send(emails, fg=True)
                     except Exception:
-                        msg = 'Could not send emails'
-                        self.logger.critical(msg)
-                        return InternalServerError(msg)
+                        if self.debug:
+                            raise
+                        else:
+                            msg = 'Could not send emails'
+                            self.logger.critical(msg)
+                            return InternalServerError(msg)
                     else:
                         msg = 'Emails sent'
                         self.logger.info(msg)
