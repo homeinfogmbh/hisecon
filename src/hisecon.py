@@ -7,6 +7,7 @@ from logging import getLogger
 from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
+from ssl import SSLError
 
 from requests import post
 
@@ -230,6 +231,10 @@ class Hisecon(WsgiApp):
                         return InternalServerError(msg)
                     except SMTPRecipientsRefused:
                         msg = 'Recipient refused'
+                        self.logger.critical(msg)
+                        return InternalServerError(msg)
+                    except SSLError:
+                        msg = 'Cannot connect to mail server'
                         self.logger.critical(msg)
                         return InternalServerError(msg)
                     except Exception:
