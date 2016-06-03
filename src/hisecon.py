@@ -207,7 +207,7 @@ class Hisecon(WsgiApp):
 
                 if recipient or issuer:
                     self.logger.debug('Updated recipients: {}'.format(
-                        recipients)
+                        recipients))
 
                 try:
                     body_html, body_plain = self._get_text(environ, html=html)
