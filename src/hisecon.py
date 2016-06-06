@@ -147,8 +147,13 @@ class Hisecon(WsgiApp):
             smtp_port = int(self.config.mail['PORT'])
 
         self.logger.debug('Got SMTP port: {}'.format(smtp_port))
+
+        smtp_ssl = cfgd.get('smtp_ssl', None)
+        self.logger.debug('Got SMTP SSL: {}'.format(smtp_ssl))
+
         smtp_user = cfgd.get('smtp_user') or self.config.mail['USER']
         self.logger.debug('Got SMTP user: {}'.format(smtp_user))
+
         smtp_passwd = cfgd.get('smtp_passwd') or self.config.mail['PASSWD']
         self.logger.debug('Got SMTP passwd: {}'.format(smtp_passwd))
 
@@ -195,7 +200,7 @@ class Hisecon(WsgiApp):
                 self.logger.debug('Got recipients: {}'.format(recipients))
 
                 mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd,
-                                allow_insecure=True, logger=self.logger)
+                                ssl=smtp_ssl, logger=self.logger)
 
                 if recipient:
                     recipients.append(recipient)
