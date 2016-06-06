@@ -12,7 +12,8 @@ from requests import post
 
 from homeinfo.lib.config import Configuration
 from homeinfo.lib.mail import Mailer, EMail
-from homeinfo.lib.wsgi import OK, Error, InternalServerError, WsgiApp
+from homeinfo.lib.wsgi import OK, Error, InternalServerError, handler, \
+    RequestHandler, WsgiApp
 
 __all__ = ['Hisecon']
 
@@ -54,17 +55,14 @@ class HiseconConfig(Configuration):
         return self['mail']
 
 
-class Hisecon(WsgiApp):
-    """WSGI mailer app"""
+class HiseconRequestHandler(RequestHandler):
+    """Handles requests of the hisecon app"""
 
-    DEBUG = True
-
-    SECRETS_FILE = '/etc/hisecon.domains'
-
-    def __init__(self, date_format=None):
-        super().__init__(cors=True, date_format=date_format)
-        self.logger = getLogger(name=self.__class__.__name__.upper())
+    def __init__(self, environ):
+        super().__init__(environ)
+        self.SECRETS_FILE = '/etc/hisecon.domains'
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
+        self.logger = getLogger(name='HISECON')
 
     @property
     def configs_text(self):
@@ -95,7 +93,7 @@ class Hisecon(WsgiApp):
 
         return sites
 
-    def post(self, environ):
+    def post(self):
         """Handles POST requests
 
         Required params:
@@ -111,10 +109,8 @@ class Hisecon(WsgiApp):
             body_plain
             body_html
         """
-        query_string = self.query_string(environ)
-        self.logger.debug(query_string)
-
-        qd = self.qd(query_string)
+        # Get query dictionary from API
+        qd = self.query_dict
         self.logger.debug(str(qd))
 
         remoteip = qd.get('remoteip')
@@ -215,7 +211,7 @@ class Hisecon(WsgiApp):
                         recipients))
 
                 try:
-                    body_html, body_plain = self._get_text(environ, html=html)
+                    body_html, body_plain = self._get_text(html=html)
                 except ValueError:
                     msg = 'Non-text data received'
                     self.logger.error(msg)
@@ -257,13 +253,12 @@ class Hisecon(WsgiApp):
                     body_html=body_html))
             yield email
 
-    def _get_text(self, environ, html=False):
+    def _get_text(self, html=False):
         """Get message text"""
         body_html = None
         body_plain = None
 
-        fh = self.file(environ)
-        data = fh.read()
+        data = self.file.read()
         text = data.decode()
 
         if html:
@@ -306,3 +301,10 @@ class Hisecon(WsgiApp):
             msg = 'Emails sent'
             self.logger.info(msg)
             return OK(msg)
+
+
+@handler(HiseconRequestHandler)
+class Hisecon(WsgiApp):
+    """WSGI mailer app"""
+
+    DEBUG = True
