@@ -58,8 +58,8 @@ class HiseconConfig(Configuration):
 class HiseconRequestHandler(RequestHandler):
     """Handles requests of the hisecon app"""
 
-    def __init__(self, environ):
-        super().__init__(environ)
+    def __init__(self, environ, cors, date_format, debug):
+        super().__init__(environ, cors, date_format, debug)
         self.SECRETS_FILE = '/etc/hisecon.domains'
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
         self.logger = getLogger(name='HISECON')
