@@ -308,3 +308,7 @@ class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
     DEBUG = True
+
+    def __init__(self):
+        """Enable CORS"""
+        super().__init__(cors=True)
