@@ -33,14 +33,21 @@ class ReCaptcha():
         """Verifies reCAPTCHA data"""
         return self.verify()
 
-    def verify(self):
-        """Verifies reCAPTCHA data"""
-        params = {'secret': self.secret, 'response': self.response}
+    @property
+    def params(self):
+        """Returns the parameters dictionary for requests"""
+        params = {
+            'secret': self.secret,
+            'response': self.response}
 
         if self.remoteip is not None:
             params['remoteip'] = self.remoteip
 
-        response = post(self.VERIFICATION_URL, params=params)
+        return params
+
+    def verify(self):
+        """Verifies reCAPTCHA data"""
+        response = post(self.VERIFICATION_URL, params=self.params)
         response_dict = loads(response.text)
 
         return response_dict.get('success', False) is True
@@ -60,38 +67,36 @@ class HiseconRequestHandler(RequestHandler):
 
     def __init__(self, environ, cors, date_format, debug):
         super().__init__(environ, cors, date_format, debug)
-        self.SECRETS_FILE = '/etc/hisecon.domains'
+        self.SITES_FILE = '/etc/hisecon.sites'
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
         self.logger = getLogger(name='HISECON')
 
     @property
-    def configs_text(self):
+    def sites_text(self):
         """Loads the text from the configurations file"""
         try:
-            with open(self.SECRETS_FILE) as f:
+            with open(self.SITES_FILE) as f:
                 s = f.read()
         except FileNotFoundError:
             self.logger.error('Secrets file not found: {}'.format(
-                self.SECRETS_FILE))
+                self.SITES_FILE))
         except PermissionError:
             self.logger.error('Secrets file "{}" could not be opened'.format(
-                self.SECRETS_FILE))
+                self.SITES_FILE))
         else:
             return s
 
     @property
-    def configs(self):
+    def sites(self):
         """Loads the configurations dictionary"""
         try:
-            configs_dict = loads(self.configs_text)
+            sites_dict = loads(self.sites_text)
         except ValueError:
-            self.logger.error('Secrets file "{}" has invalid content'.format(
-                self.SECRETS_FILE))
+            self.logger.error('Sites file "{}" has invalid content'.format(
+                self.SITES_FILE))
             return {}
         else:
-            return configs_dict
-
-        return sites
+            return sites_dict
 
     def post(self):
         """Handles POST requests
@@ -128,33 +133,33 @@ class HiseconRequestHandler(RequestHandler):
             return Error(msg, status=400)
         else:
             try:
-                cfgd = self.configs[config]
+                site = self.sites[config]
             except KeyError:
                 msg = 'No such configuration entry: "{}"'.format(config)
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
-        smtp_host = cfgd.get('smtp_host') or self.config.mail['ADDR']
+        smtp_host = site.get('smtp_host') or self.config.mail['ADDR']
         self.logger.debug('Got SMTP host: {}'.format(smtp_host))
 
         try:
-            smtp_port = int(cfgd.get('smtp_port'))
+            smtp_port = int(site.get('smtp_port'))
         except (TypeError, ValueError):
             smtp_port = int(self.config.mail['PORT'])
 
         self.logger.debug('Got SMTP port: {}'.format(smtp_port))
 
-        smtp_ssl = cfgd.get('smtp_ssl', None)
+        smtp_ssl = site.get('smtp_ssl', None)
         self.logger.debug('Got SMTP SSL: {}'.format(smtp_ssl))
 
-        smtp_user = cfgd.get('smtp_user') or self.config.mail['USER']
+        smtp_user = site.get('smtp_user') or self.config.mail['USER']
         self.logger.debug('Got SMTP user: {}'.format(smtp_user))
 
-        smtp_passwd = cfgd.get('smtp_passwd') or self.config.mail['PASSWD']
+        smtp_passwd = site.get('smtp_passwd') or self.config.mail['PASSWD']
         self.logger.debug('Got SMTP passwd: {}'.format(smtp_passwd))
 
         try:
-            secret = cfgd['secret']
+            secret = site['secret']
         except KeyError:
             msg = 'No secret specified for configuration'
             self.logger.critical(msg)
@@ -190,9 +195,9 @@ class HiseconRequestHandler(RequestHandler):
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
-                sender = cfgd.get('smtp_from') or self.config.mail['FROM']
+                sender = site.get('smtp_from') or self.config.mail['FROM']
                 self.logger.debug('Got sender: {}'.format(sender))
-                recipients = cfgd.get('recipients') or []
+                recipients = site.get('recipients') or []
                 self.logger.debug('Got recipients: {}'.format(recipients))
 
                 mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd,
