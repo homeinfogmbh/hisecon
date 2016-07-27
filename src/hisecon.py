@@ -67,7 +67,7 @@ class HiseconRequestHandler(RequestHandler):
 
     def __init__(self, environ, cors, date_format, debug):
         super().__init__(environ, cors, date_format, debug)
-        self.SITES_FILE = '/etc/hisecon.sites'
+        self.json = '/etc/hisecon.json'
         self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
         self.logger = getLogger(name='HISECON')
 
@@ -75,14 +75,14 @@ class HiseconRequestHandler(RequestHandler):
     def sites_text(self):
         """Loads the text from the configurations file"""
         try:
-            with open(self.SITES_FILE) as f:
+            with open(self.json) as f:
                 s = f.read()
         except FileNotFoundError:
-            self.logger.error('Secrets file not found: {}'.format(
-                self.SITES_FILE))
+            self.logger.error('Sites file not found: {}'.format(
+                self.json))
         except PermissionError:
-            self.logger.error('Secrets file "{}" could not be opened'.format(
-                self.SITES_FILE))
+            self.logger.error('Sites file "{}" could not be opened'.format(
+                self.json))
         else:
             return s
 
