@@ -139,7 +139,7 @@ class HiseconRequestHandler(RequestHandler):
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
-        smtp_host = site.get('smtp_host') or self.config.mail['ADDR']
+        smtp_host = site.get('smtp_host') or self.config.mail['HOST']
         self.logger.debug('Got SMTP host: {}'.format(smtp_host))
 
         try:
