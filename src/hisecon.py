@@ -263,21 +263,20 @@ class HiseconRequestHandler(RequestHandler):
         body_html = None
         body_plain = None
 
-        data = self.file.read()
-        text = data.decode()
+        text = self.data.decode()
 
         if html:
             body_html = text
-            self.logger.debug('Got HTML text: {0}'.format(body_html))
+            self.logger.debug('Got HTML text: {}'.format(body_html))
             body_html = unquote(text)
-            self.logger.debug('Unquoted HTML text: {0}'.format(body_html))
+            self.logger.debug('Unquoted HTML text: {}'.format(body_html))
         else:
             body_plain = text
-            self.logger.debug('Got plain text: {0}'.format(body_plain))
+            self.logger.debug('Got plain text: {}'.format(body_plain))
             body_plain = unquote(body_plain)
-            self.logger.debug('Unquoted plain text: {0}'.format(body_plain))
+            self.logger.debug('Unquoted plain text: {}'.format(body_plain))
             body_plain = body_plain.replace('<br>', '\n')
-            self.logger.debug('Translated plain text: {0}'.format(body_plain))
+            self.logger.debug('Translated plain text: {}'.format(body_plain))
 
         return (body_html, body_plain)
 
