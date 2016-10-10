@@ -12,8 +12,8 @@ from requests import post
 
 from homeinfo.lib.config import Configuration
 from homeinfo.lib.mail import Mailer, EMail
-from homeinfo.lib.wsgi import OK, Error, InternalServerError, handler, \
-    RequestHandler, WsgiApp
+from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler, \
+    WsgiApp
 
 __all__ = ['Hisecon']
 
@@ -307,7 +307,6 @@ class HiseconRequestHandler(RequestHandler):
             return OK(msg)
 
 
-@handler(HiseconRequestHandler)
 class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
@@ -315,4 +314,4 @@ class Hisecon(WsgiApp):
 
     def __init__(self):
         """Enable CORS"""
-        super().__init__(cors=True)
+        super().__init__(HiseconRequestHandler, cors=True)
