@@ -114,19 +114,18 @@ class HiseconRequestHandler(RequestHandler):
             body_plain
             body_html
         """
-        # Get query dictionary from API
-        qd = self.query_dict
-        self.logger.debug(str(qd))
+        # Log params
+        self.logger.debug(str(self.params))
 
-        remoteip = qd.get('remoteip')
+        remoteip = self.params.get('remoteip')
         self.logger.debug('Got remote IP: {}'.format(remoteip))
-        issuer = qd.get('issuer')
+        issuer = self.params.get('issuer')
         self.logger.debug('Got issuer: {}'.format(issuer))
-        html = True if qd.get('html') else False
+        html = True if self.params.get('html') else False
         self.logger.debug('HTML content is: {}'.format(remoteip))
 
         try:
-            config = qd.get('config')
+            config = self.params.get('config')
         except KeyError:
             msg = 'No configuration provided'
             self.logger.warning(msg)
@@ -166,7 +165,7 @@ class HiseconRequestHandler(RequestHandler):
             return InternalServerError(msg)
 
         try:
-            response = qd['response']
+            response = self.params['response']
         except KeyError:
             msg = 'No reCAPTCHA response provided'
             self.logger.warning(msg)
@@ -175,14 +174,14 @@ class HiseconRequestHandler(RequestHandler):
             self.logger.debug('Got reCAPTCHA response: {}'.format(response))
 
         try:
-            recipient = qd['recipient']
+            recipient = self.params['recipient']
         except KeyError:
             recipient = None
 
         self.logger.debug('Got additional recipient: {}'.format(recipient))
 
         try:
-            subject = qd['subject']
+            subject = self.params['subject']
         except KeyError:
             msg = 'No subject provided'
             self.logger.warning(msg)
