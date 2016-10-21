@@ -65,24 +65,21 @@ class HiseconConfig(Configuration):
 class HiseconRequestHandler(RequestHandler):
     """Handles requests of the hisecon app"""
 
-    def __init__(self, environ, cors, date_format, debug):
-        super().__init__(environ, cors, date_format, debug)
-        self.json = '/etc/hisecon.json'
-        self.config = HiseconConfig('/etc/hisecon.conf', alert=True)
-        self.logger = getLogger(name='HISECON')
+    JSON = '/etc/hisecon.json'
+    CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
 
     @property
     def sites_text(self):
         """Loads the text from the configurations file"""
         try:
-            with open(self.json) as f:
+            with open(self.JSON) as f:
                 s = f.read()
         except FileNotFoundError:
             self.logger.error('Sites file not found: {}'.format(
-                self.json))
+                self.JSON))
         except PermissionError:
             self.logger.error('Sites file "{}" could not be opened'.format(
-                self.json))
+                self.JSON))
         else:
             return s
 
@@ -138,23 +135,23 @@ class HiseconRequestHandler(RequestHandler):
                 self.logger.warning(msg)
                 return Error(msg, status=400)
 
-        smtp_host = site.get('smtp_host') or self.config.mail['HOST']
+        smtp_host = site.get('smtp_host') or self.CONFIG.mail['HOST']
         self.logger.debug('Got SMTP host: {}'.format(smtp_host))
 
         try:
             smtp_port = int(site.get('smtp_port'))
         except (TypeError, ValueError):
-            smtp_port = int(self.config.mail['PORT'])
+            smtp_port = int(self.CONFIG.mail['PORT'])
 
         self.logger.debug('Got SMTP port: {}'.format(smtp_port))
 
         smtp_ssl = site.get('smtp_ssl', None)
         self.logger.debug('Got SMTP SSL: {}'.format(smtp_ssl))
 
-        smtp_user = site.get('smtp_user') or self.config.mail['USER']
+        smtp_user = site.get('smtp_user') or self.CONFIG.mail['USER']
         self.logger.debug('Got SMTP user: {}'.format(smtp_user))
 
-        smtp_passwd = site.get('smtp_passwd') or self.config.mail['PASSWD']
+        smtp_passwd = site.get('smtp_passwd') or self.CONFIG.mail['PASSWD']
         self.logger.debug('Got SMTP passwd: {}'.format(smtp_passwd))
 
         try:
@@ -194,7 +191,7 @@ class HiseconRequestHandler(RequestHandler):
         try:
             if ReCaptcha(secret, response, remoteip=remoteip):
                 self.logger.info('Got valid reCAPTCHA')
-                sender = site.get('smtp_from') or self.config.mail['FROM']
+                sender = site.get('smtp_from') or self.CONFIG.mail['FROM']
                 self.logger.debug('Got sender: {}'.format(sender))
                 recipients = site.get('recipients') or []
                 self.logger.debug('Got recipients: {}'.format(recipients))
