@@ -114,17 +114,14 @@ class HiseconRequestHandler(RequestHandler):
         Required params:
             config
             response
-            recipient
             subject
 
         Optional params:
-            sender
+            recipient
             remoteip
             issuer
-            body_plain
-            body_html
+            html
         """
-        print('LOG LEVEL:', self.logger.level, flush=True)
         remoteip = self.params.get('remoteip')
         issuer = self.params.get('issuer')
         html = True if self.params.get('html') else False
@@ -252,9 +249,9 @@ class HiseconRequestHandler(RequestHandler):
 class Hisecon(WsgiApp):
     """WSGI mailer app"""
 
+    DEBUG = True
+
     def __init__(self):
         """Enable CORS"""
         super().__init__(HiseconRequestHandler, cors=True)
         self.logger.level = LogLevel.INFO
-        self.logger.info('INFO 123')
-        self.logger.success('SUCCESS 123')
