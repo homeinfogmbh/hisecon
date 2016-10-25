@@ -3,7 +3,6 @@
 This project provides a secure web mailer wusing reCaptcha by Google Inc.
 and a token system to authenticate calling sites.
 """
-from logging import getLogger
 from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
@@ -11,6 +10,7 @@ from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 from requests import post
 
 from homeinfo.lib.config import Configuration
+from homeinfo.lib.log import Logger
 from homeinfo.lib.mail import Mailer, EMail
 from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler, \
     WsgiApp
@@ -149,7 +149,7 @@ class HiseconRequestHandler(RequestHandler):
         except (TypeError, ValueError):
             smtp_port = int(self.CONFIG.mail['PORT'])
 
-        smtp_ssl = site.get('smtp_ssl', None)
+        smtp_ssl = site.get('smtp_ssl', True)
         smtp_user = site.get('smtp_user') or self.CONFIG.mail['USER']
         smtp_passwd = site.get('smtp_passwd') or self.CONFIG.mail['PASSWD']
 
