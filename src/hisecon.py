@@ -124,6 +124,7 @@ class HiseconRequestHandler(RequestHandler):
             body_plain
             body_html
         """
+        print('LOG LEVEL:', self.logger.level, flush=True)
         remoteip = self.params.get('remoteip')
         issuer = self.params.get('issuer')
         html = True if self.params.get('html') else False
@@ -244,7 +245,7 @@ class HiseconRequestHandler(RequestHandler):
             raise InternalServerError(msg) from None
         else:
             msg = 'Emails sent'
-            self.logger.info(msg)
+            self.logger.success(msg)
             return OK(msg)
 
 
@@ -255,3 +256,5 @@ class Hisecon(WsgiApp):
         """Enable CORS"""
         super().__init__(HiseconRequestHandler, cors=True)
         self.logger.level = LogLevel.INFO
+        self.logger.info('INFO 123')
+        self.logger.success('SUCCESS 123')
