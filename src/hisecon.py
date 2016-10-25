@@ -89,7 +89,7 @@ class HiseconRequestHandler(RequestHandler):
     CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
 
     @property
-    def sites_text(self):
+    def _sites_text(self):
         """Loads the text from the configurations file"""
         try:
             with open(self.JSON) as f:
@@ -103,9 +103,9 @@ class HiseconRequestHandler(RequestHandler):
     def sites(self):
         """Loads the configurations dictionary"""
         try:
-            return loads(self.sites_text)
+            return loads(self._sites_text)
         except ValueError:
-            self.logger.error('Invalid content:\n{}'.format(self.sites_text))
+            self.logger.error('Invalid content:\n{}'.format(self._sites_text))
             return {}
 
     def post(self):
@@ -142,16 +142,8 @@ class HiseconRequestHandler(RequestHandler):
                 self.logger.warning(msg)
                 raise Error(msg, status=400) from None
 
-        smtp_host = site.get('smtp_host') or self.CONFIG.mail['HOST']
-
-        try:
-            smtp_port = int(site.get('smtp_port'))
-        except (TypeError, ValueError):
-            smtp_port = int(self.CONFIG.mail['PORT'])
-
-        smtp_ssl = site.get('smtp_ssl', True)
-        smtp_user = site.get('smtp_user') or self.CONFIG.mail['USER']
-        smtp_passwd = site.get('smtp_passwd') or self.CONFIG.mail['PASSWD']
+        # Get optional SMTP configuration
+        smtp = site.get('smtp', {})
 
         try:
             secret = site['secret']
@@ -183,11 +175,16 @@ class HiseconRequestHandler(RequestHandler):
 
         if ReCaptcha(secret, response, remoteip=remoteip):
             self.logger.info('Got valid reCAPTCHA')
-            sender = site.get('smtp_from') or self.CONFIG.mail['FROM']
+            sender = smtp.get('from', self.CONFIG.mail['FROM'])
             recipients = site.get('recipients') or []
 
-            mailer = Mailer(smtp_host, smtp_port, smtp_user, smtp_passwd,
-                            ssl=smtp_ssl, logger=self.logger)
+            mailer = Mailer(
+                smtp.get('host', self.CONFIG.mail['HOST']),
+                smtp.get('port', int(self.CONFIG.mail['PORT'])),
+                smtp.get('user', self.CONFIG.mail['USER']),
+                smtp.get('passwd', self.CONFIG.mail['PASSWD']),
+                ssl=smtp.get('ssl', True),
+                logger=self.logger)
 
             if recipient:
                 recipients.append(recipient)
