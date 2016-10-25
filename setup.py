@@ -16,8 +16,6 @@ setup(
     package_dir={'homeinfo': 'src'},
     py_modules=['homeinfo.hisecon'],
     data_files=[
-        ('/etc', [
-            'src/hisecon.conf']),
         ('/etc/uwsgi/apps-available', [
             'src/hisecon.ini']),
         ('/usr/share', [
