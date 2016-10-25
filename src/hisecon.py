@@ -10,7 +10,7 @@ from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 from requests import post
 
 from homeinfo.lib.config import Configuration
-from homeinfo.lib.log import Logger
+from homeinfo.lib.log import LogLevel, Logger
 from homeinfo.lib.mail import Mailer, EMail
 from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler, \
     WsgiApp
@@ -223,20 +223,12 @@ class HiseconRequestHandler(RequestHandler):
 
     def _get_text(self, html=False):
         """Get message text"""
-        body_html = None
-        body_plain = None
-
-        text = self.data.decode()
+        text = unquote(self.data.decode())
 
         if html:
-            body_html = text
-            body_html = unquote(text)
+            return (text, None)
         else:
-            body_plain = text
-            body_plain = unquote(body_plain)
-            body_plain = body_plain.replace('<br>', '\n')
-
-        return (body_html, body_plain)
+            return (None, text.replace('<br>', '\n'))
 
     def _send_mails(self, mailer, emails):
         """Actually send emails"""
@@ -262,3 +254,4 @@ class Hisecon(WsgiApp):
     def __init__(self):
         """Enable CORS"""
         super().__init__(HiseconRequestHandler, cors=True)
+        self.logger.level = LogLevel.INFO
