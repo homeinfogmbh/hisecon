@@ -184,6 +184,9 @@ class HiseconRequestHandler(RequestHandler):
                 ssl=smtp.get('ssl', True),
                 logger=self.logger)
 
+            # XXX: DEBUG
+            print('SMTP: ', mailer.smtp_server, ':', mailer.smtp_port, sep='')
+
             if recipient:
                 recipients.append(recipient)
 
