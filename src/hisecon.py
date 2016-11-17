@@ -10,10 +10,9 @@ from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 from requests import post
 
 from homeinfo.lib.config import Configuration
-from homeinfo.lib.log import LogLevel, Logger
+from homeinfo.lib.log import Logger
 from homeinfo.lib.mail import Mailer, EMail
-from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler, \
-    WsgiApp
+from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler
 
 __all__ = ['Hisecon']
 
@@ -82,7 +81,7 @@ class HiseconConfig(Configuration):
         return self['mail']
 
 
-class HiseconRequestHandler(RequestHandler):
+class Hisecon(RequestHandler):
     """Handles requests of the hisecon app"""
 
     JSON = '/etc/hisecon.json'
@@ -244,14 +243,3 @@ class HiseconRequestHandler(RequestHandler):
             msg = 'Emails sent'
             self.logger.success(msg)
             return OK(msg)
-
-
-class Hisecon(WsgiApp):
-    """WSGI mailer app"""
-
-    DEBUG = True
-
-    def __init__(self):
-        """Enable CORS"""
-        super().__init__(HiseconRequestHandler, cors=True)
-        self.logger.level = LogLevel.INFO
