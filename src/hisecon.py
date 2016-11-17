@@ -121,12 +121,12 @@ class Hisecon(RequestHandler):
             issuer
             html
         """
-        remoteip = self.params.get('remoteip')
-        issuer = self.params.get('issuer')
-        html = True if self.params.get('html') else False
+        remoteip = self.query.get('remoteip')
+        issuer = self.query.get('issuer')
+        html = True if self.query.get('html') else False
 
         try:
-            config = self.params.get('config')
+            config = self.query.get('config')
         except KeyError:
             msg = 'No configuration provided'
             self.logger.warning(msg)
@@ -150,19 +150,19 @@ class Hisecon(RequestHandler):
             raise InternalServerError(msg) from None
 
         try:
-            response = self.params['response']
+            response = self.query['response']
         except KeyError:
             msg = 'No reCAPTCHA response provided'
             self.logger.warning(msg)
             raise Error(msg, status=400) from None
 
         try:
-            recipient = self.params['recipient']
+            recipient = self.query['recipient']
         except KeyError:
             recipient = None
 
         try:
-            subject = self.params['subject']
+            subject = self.query['subject']
         except KeyError:
             msg = 'No subject provided'
             self.logger.warning(msg)
