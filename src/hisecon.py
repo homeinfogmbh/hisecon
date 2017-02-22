@@ -8,71 +8,12 @@ from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
-from requests import post
-
 from homeinfo.lib.config import Configuration
-from homeinfo.lib.log import Logger
 from homeinfo.lib.mail import Mailer, EMail
+from homeinfo.lib.web import ReCaptcha
 from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler
 
 __all__ = ['Hisecon']
-
-
-class ReCaptcha():
-    """Re captcha wrapper"""
-
-    VERIFICATION_URL = 'https://www.google.com/recaptcha/api/siteverify'
-
-    def __init__(self, secret, response, remote_ip=None, logger=None):
-        """Sets basic reCAPTCHA data"""
-        self.secret = secret
-        self.response = response
-        self.remote_ip = remote_ip
-        self.response = None
-
-        if logger is None:
-            self.logger = Logger(self.__class__.__name__)
-        else:
-            self.logger = logger.inherit(self.__class__.__name__)
-
-    def __bool__(self):
-        """Verifies reCAPTCHA data"""
-        self.query()
-        return True if self.verify() else False
-
-    @property
-    def _params(self):
-        """Returns the parameters dictionary for requests"""
-        params = {
-            'secret': self.secret,
-            'response': self.response}
-
-        if self.remote_ip is not None:
-            params['remoteip'] = self.remote_ip
-
-        return params
-
-    @property
-    def dict(self):
-        """Returns the response dictionary"""
-        try:
-            return loads(self.response.text)
-        except TypeError:
-            self.logger.error('No response available yet')
-        except ValueError:
-            self.logger.error('Invalid reCAPTCHA response: {}'.format(
-                self.response.text))
-
-        return {}
-
-    def query(self, force=False):
-        """Calls the web API"""
-        if self.response is None or force:
-            self.response = post(self.VERIFICATION_URL, params=self._params)
-
-    def verify(self):
-        """Verifies reCAPTCHA data"""
-        return self.dict.get('success', False)
 
 
 class HiseconConfig(Configuration):
