@@ -1,8 +1,9 @@
 """HOMEINFO Secure Contact form
 
-This project provides a secure web mailer wusing reCaptcha by Google Inc.
+This project provides a secure web mailer using reCaptcha by Google Inc.
 and a token system to authenticate calling sites.
 """
+from contextlib import suppress
 from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
@@ -87,6 +88,11 @@ class Hisecon(RequestHandler):
     JSON = '/etc/hisecon.json'
     CONFIG = HiseconConfig('/etc/hisecon.conf', alert=True)
 
+    def __init__(self, *args, **kwargs):
+        """Load site once"""
+        super().__init__(*args, **kwargs)
+        self.site = self._site
+
     @property
     def _sites_text(self):
         """Loads the text from the configurations file"""
@@ -107,6 +113,142 @@ class Hisecon(RequestHandler):
             self.logger.error('Invalid content:\n{}'.format(self._sites_text))
             return {}
 
+    @property
+    def remote_ip(self):
+        """Returns the specified remote IP address"""
+        return self.query.get('remoteip')
+
+    @property
+    def issuer(self):
+        """Returns the optional issuer address"""
+        return self.query.get('issuer')
+
+    @property
+    def reply_to(self):
+        """Returns the optional reply-to address"""
+        return self.query.get('reply_to')
+
+    @property
+    def html(self):
+        """Returns the HTML format flag"""
+        return True if self.query.get('html') else False
+
+    @property
+    def config(self):
+        """Returns the specified configuration"""
+        try:
+            return self.query.get('config')
+        except KeyError:
+            msg = 'No configuration provided'
+            self.logger.warning(msg)
+            raise Error(msg, status=400) from None
+
+    @property
+    def _site(self):
+        """Returns the respective configuration settings"""
+        try:
+            return self.sites[self.config]
+        except KeyError:
+            msg = 'No such configuration entry: "{}"'.format(self.config)
+            self.logger.warning(msg)
+            raise Error(msg, status=400) from None
+
+    @property
+    def smtp(self):
+        """Get optional SMTP configuration"""
+        return self.site.get('smtp', {})
+
+    @property
+    def secret(self):
+        """Returns the respective reCAPTCHA secret"""
+        try:
+            return self.site['secret']
+        except KeyError:
+            msg = 'No secret specified for configuration'
+            self.logger.critical(msg)
+            raise InternalServerError(msg) from None
+
+    @property
+    def response(self):
+        """Returns the respective reCAPTCHA response"""
+        try:
+            return self.query['response']
+        except KeyError:
+            msg = 'No reCAPTCHA response provided'
+            self.logger.warning(msg)
+            raise Error(msg, status=400) from None
+
+    @property
+    def default_recipients(self):
+        """Yields default recipients"""
+        with suppress(KeyError):
+            return self.site['recipients']
+
+    @property
+    def additional_recipients(self):
+        """Yields the optional additional recipients"""
+        with suppress(KeyError):
+            for recipient in self.query['recipients'].split(','):
+                recipient = recipient.strip()
+
+                if recipient:
+                    yield recipient
+
+        # Yield legacy single recipient argument
+        with suppress(KeyError):
+            yield self.query['recipient']
+
+    @property
+    def recipients(self):
+        """Yields all recipients"""
+        yield from self.default_recipients
+        yield from self.additional_recipients
+
+        if self.issuer is not None:
+            yield self.issuer
+
+    @property
+    def subject(self):
+        """Returns the respective subject"""
+        try:
+            subject = self.query['subject']
+        except KeyError:
+            msg = 'No subject provided'
+            self.logger.warning(msg)
+            raise Error(msg, status=400) from None
+        else:
+            return unquote(subject)
+
+    @property
+    def host(self):
+        """Returns the SMTP server's host name"""
+        return self.smtp.get('host', self.CONFIG.mail['HOST'])
+
+    @property
+    def port(self):
+        """Returns the SMTP server's port"""
+        return self.smtp.get('port', int(self.CONFIG.mail['PORT']))
+
+    @property
+    def user(self):
+        """Returns the SMTP user"""
+        return self.smtp.get('user', self.CONFIG.mail['USER'])
+
+    @property
+    def passwd(self):
+        """Returns the SMTP user's password"""
+        return self.smtp.get('passwd', self.CONFIG.mail['PASSWD'])
+
+    @property
+    def ssl(self):
+        """Returns the SMTP server's SSL/TLS settings"""
+        return self.smtp.get('ssl', True)
+
+    @property
+    def sender(self):
+        """Returns the specified sender's email address"""
+        return self.smtp.get('from', self.CONFIG.mail['FROM'])
+
     def post(self):
         """Handles POST requests
 
@@ -121,76 +263,15 @@ class Hisecon(RequestHandler):
             issuer
             html
         """
-        remoteip = self.query.get('remoteip')
-        issuer = self.query.get('issuer')
-        html = True if self.query.get('html') else False
-
-        try:
-            config = self.query.get('config')
-        except KeyError:
-            msg = 'No configuration provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
-        else:
-            try:
-                site = self.sites[config]
-            except KeyError:
-                msg = 'No such configuration entry: "{}"'.format(config)
-                self.logger.warning(msg)
-                raise Error(msg, status=400) from None
-
-        # Get optional SMTP configuration
-        smtp = site.get('smtp', {})
-
-        try:
-            secret = site['secret']
-        except KeyError:
-            msg = 'No secret specified for configuration'
-            self.logger.critical(msg)
-            raise InternalServerError(msg) from None
-
-        try:
-            response = self.query['response']
-        except KeyError:
-            msg = 'No reCAPTCHA response provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
-
-        try:
-            recipient = self.query['recipient']
-        except KeyError:
-            recipient = None
-
-        try:
-            subject = self.query['subject']
-        except KeyError:
-            msg = 'No subject provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
-        else:
-            subject = unquote(subject)
-
-        if ReCaptcha(secret, response, remoteip=remoteip):
+        if ReCaptcha(self.secret, self.response, remoteip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
-            sender = smtp.get('from', self.CONFIG.mail['FROM'])
-            recipients = site.get('recipients') or []
 
             mailer = Mailer(
-                smtp.get('host', self.CONFIG.mail['HOST']),
-                smtp.get('port', int(self.CONFIG.mail['PORT'])),
-                smtp.get('user', self.CONFIG.mail['USER']),
-                smtp.get('passwd', self.CONFIG.mail['PASSWD']),
-                ssl=smtp.get('ssl', True),
+                self.host, self.port, self.user, self.passwd, ssl=self.ssl,
                 logger=self.logger)
 
-            if recipient:
-                recipients.append(recipient)
-
-            if issuer:
-                recipients.append(issuer)
-
             try:
-                body_html, body_plain = self._get_text(html=html)
+                body_html, body_plain = self._get_text(html=self.html)
             except ValueError:
                 msg = 'Non-text data received'
                 self.logger.error(msg)
@@ -201,22 +282,28 @@ class Hisecon(RequestHandler):
                     self.logger.warning(msg)
                     raise Error(msg, status=400) from None
                 else:
-                    emails = [email for email in self._emails(
-                        sender, recipients, subject,
-                        body_html=body_html, body_plain=body_plain)]
+                    emails = list(self._emails(
+                        self.sender, self.recipients,
+                        self.subject, self.reply_to,
+                        body_html=body_html, body_plain=body_plain))
                     return self._send_mails(mailer, emails)
         else:
             msg = 'reCAPTCHA check failed'
             self.logger.error(msg)
             raise Error(msg, status=400) from None
 
-    def _emails(self, sender, recipients, subject,
+    def _emails(self, sender, recipients, subject, reply_to,
                 body_html=None, body_plain=None):
         """Actually sends emails"""
         for recipient in recipients:
-            yield EMail(
+            email = EMail(
                 subject, sender, recipient,
                 plain=body_plain, html=body_html)
+
+            if reply_to is not None:
+                email.add_header('reply-to', reply_to)
+
+            yield email
 
     def _get_text(self, html=False):
         """Get message text"""
