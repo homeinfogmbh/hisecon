@@ -137,7 +137,7 @@ class Hisecon(RequestHandler):
     def config(self):
         """Returns the specified configuration"""
         try:
-            return self.query.get('config')
+            return self.query['config']
         except KeyError:
             msg = 'No configuration provided'
             self.logger.warning(msg)
