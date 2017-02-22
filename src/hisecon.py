@@ -23,23 +23,21 @@ class ReCaptcha():
 
     VERIFICATION_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
-    def __init__(self, secret, response, remoteip=None, logger=None):
+    def __init__(self, secret, response, remote_ip=None, logger=None):
         """Sets basic reCAPTCHA data"""
         self.secret = secret
         self.response = response
-        self.remoteip = remoteip
+        self.remote_ip = remote_ip
+        self.response = None
 
         if logger is None:
             self.logger = Logger(self.__class__.__name__)
         else:
             self.logger = logger.inherit(self.__class__.__name__)
 
-    def __call__(self):
-        """Calls the web API"""
-        return post(self.VERIFICATION_URL, params=self._params)
-
     def __bool__(self):
         """Verifies reCAPTCHA data"""
+        self.query()
         return True if self.verify() else False
 
     @property
@@ -49,28 +47,32 @@ class ReCaptcha():
             'secret': self.secret,
             'response': self.response}
 
-        if self.remoteip is not None:
-            params['remoteip'] = self.remoteip
+        if self.remote_ip is not None:
+            params['remoteip'] = self.remote_ip
 
         return params
 
     @property
     def dict(self):
         """Returns the response dictionary"""
-        text = self().text
-
         try:
-            return loads(text)
+            return loads(self.response.text)
+        except TypeError:
+            self.logger.error('No response available yet')
         except ValueError:
-            self.logger.error('Invalid reCAPTCHA response: {}'.format(text))
-            return {}
+            self.logger.error('Invalid reCAPTCHA response: {}'.format(
+                self.response.text))
+
+        return {}
+
+    def query(self, force=False):
+        """Calls the web API"""
+        if self.response is None or force:
+            self.response = post(self.VERIFICATION_URL, params=self._params)
 
     def verify(self):
         """Verifies reCAPTCHA data"""
-        try:
-            return self.dict['success']
-        except KeyError:
-            return False
+        return self.dict.get('success', False)
 
 
 class HiseconConfig(Configuration):
@@ -263,7 +265,7 @@ class Hisecon(RequestHandler):
             issuer
             html
         """
-        if ReCaptcha(self.secret, self.response, remoteip=self.remote_ip):
+        if ReCaptcha(self.secret, self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
 
             mailer = Mailer(
