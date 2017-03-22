@@ -193,14 +193,14 @@ class Hisecon(RequestHandler):
         return self.smtp.get('from', self.CONFIG.mail['FROM'])
 
     @property
-    def _bodies(self):
+    def bodies(self):
         """Get message text"""
         text = unquote(self.data.decode())
 
         if self.html:
-            return (text, None)
+            return (None, text)
         else:
-            return (None, text.replace('<br>', '\n'))
+            return (text.replace('<br>', '\n'), None)
 
     def post(self):
         """Handles POST requests
@@ -229,7 +229,7 @@ class Hisecon(RequestHandler):
 
     def _emails(self, sender, recipients, subject, reply_to):
         """Actually sends emails"""
-        body_plain, body_html = self._bodies
+        body_plain, body_html = self.bodies
 
         if not body_plain and not body_html:
             msg = 'No message body provided'
