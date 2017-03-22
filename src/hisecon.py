@@ -192,6 +192,16 @@ class Hisecon(RequestHandler):
         """Returns the specified sender's email address"""
         return self.smtp.get('from', self.CONFIG.mail['FROM'])
 
+    @property
+    def _bodies(self):
+        """Get message text"""
+        text = unquote(self.data.decode())
+
+        if self.html:
+            return (text, None)
+        else:
+            return (None, text.replace('<br>', '\n'))
+
     def post(self):
         """Handles POST requests
 
@@ -208,57 +218,40 @@ class Hisecon(RequestHandler):
         """
         if ReCaptcha(self.secret, self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
-
-            mailer = Mailer(
-                self.host, self.port, self.user, self.passwd, ssl=self.ssl,
-                logger=self.logger)
-
-            try:
-                body_html, body_plain = self._get_text(html=self.html)
-            except ValueError:
-                msg = 'Non-text data received'
-                self.logger.error(msg)
-                raise Error(msg, status=400) from None
-            else:
-                if not body_plain and not body_html:
-                    msg = 'No message provided'
-                    self.logger.warning(msg)
-                    raise Error(msg, status=400) from None
-                else:
-                    emails = list(self._emails(
-                        self.sender, self.recipients,
-                        self.subject, self.reply_to,
-                        body_html=body_html, body_plain=body_plain))
-                    return self._send_mails(mailer, emails)
+            emails = self._emails(
+                self.sender, self.recipients,
+                self.subject, self.reply_to)
+            return self._send_mails(list(emails))
         else:
             msg = 'reCAPTCHA check failed'
             self.logger.error(msg)
             raise Error(msg, status=400) from None
 
-    def _emails(self, sender, recipients, subject, reply_to,
-                body_html=None, body_plain=None):
+    def _emails(self, sender, recipients, subject, reply_to):
         """Actually sends emails"""
-        for recipient in recipients:
-            email = EMail(
-                subject, sender, recipient,
-                plain=body_plain, html=body_html)
+        body_plain, body_html = self._bodies
 
-            if reply_to is not None:
-                email.add_header('reply-to', reply_to)
-
-            yield email
-
-    def _get_text(self, html=False):
-        """Get message text"""
-        text = unquote(self.data.decode())
-
-        if html:
-            return (text, None)
+        if not body_plain and not body_html:
+            msg = 'No message body provided'
+            self.logger.warning(msg)
+            raise Error(msg, status=400) from None
         else:
-            return (None, text.replace('<br>', '\n'))
+            for recipient in recipients:
+                email = EMail(
+                    subject, sender, recipient,
+                    plain=body_plain, html=body_html)
 
-    def _send_mails(self, mailer, emails):
+                if reply_to is not None:
+                    email.add_header('reply-to', reply_to)
+
+                yield email
+
+    def _send_mails(self, emails):
         """Actually send emails"""
+        mailer = Mailer(
+            self.host, self.port, self.user, self.passwd,
+            ssl=self.ssl, logger=self.logger)
+
         try:
             mailer.send(emails, fg=True)
         except SMTPAuthenticationError:
