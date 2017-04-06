@@ -1,18 +1,12 @@
 #! /usr/bin/env python3
 
 from distutils.core import setup
-from homeinfo.lib.misc import GitInfo
-
-
-version, author, author_email, *_ = GitInfo()
 
 
 setup(
     name='hisecon',
-    version=version,
-    author=author,
-    author_email=author_email,
-    requires=['homeinfo.lib'],
+    version='latest',
+    author='Richard Neumann',
     package_dir={'homeinfo': 'src'},
     py_modules=['homeinfo.hisecon'],
     data_files=[

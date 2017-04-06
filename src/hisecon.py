@@ -8,15 +8,15 @@ from json import loads
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
-from homeinfo.lib.config import Configuration
-from homeinfo.lib.mail import Mailer, EMail
-from homeinfo.lib.web import ReCaptcha
-from homeinfo.lib.wsgi import OK, Error, InternalServerError, RequestHandler
+from configparserplus import ConfigParserPlus
+from emaillib import Mailer, EMail
+from recaptcha import ReCaptcha
+from wsgilib import OK, Error, InternalServerError, RequestHandler
 
 __all__ = ['Hisecon']
 
 
-class HiseconConfig(Configuration):
+class HiseconConfig(ConfigParserPlus):
     """Configuration parser for hisecon"""
 
     @property
