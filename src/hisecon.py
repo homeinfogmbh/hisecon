@@ -5,6 +5,7 @@ and a token system to authenticate calling sites.
 """
 from contextlib import suppress
 from json import loads
+from os.path import join
 from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
@@ -220,7 +221,7 @@ class Hisecon(RequestHandler):
             file_path = join('/usr/share/hisecon', file_name)
 
             try:
-                with open(file_path. 'r') as f:
+                with open(file_path, 'r') as f:
                     return f.read()
             except FileNotFoundError:
                 raise Error('No such template: {}.'.format(
