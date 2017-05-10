@@ -238,6 +238,12 @@ class Hisecon(RequestHandler):
             raise Error('Not a valid JSON object: {}.'.format(
                 self.text)) from None
 
+    @property
+    def mailer(self):
+        """Returns an appropriate mailer"""
+        return Mailer(self.host, self.port, self.user, self.passwd,
+                      ssl=self.ssl, logger=self.logger)
+
     def post(self):
         """Handles POST requests
 
@@ -254,10 +260,24 @@ class Hisecon(RequestHandler):
         """
         if ReCaptcha(self.secret, self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
-            emails = self._emails(
+            emails = list(self._emails(
                 self.sender, self.recipients,
-                self.subject, self.reply_to)
-            return self._send_mails(list(emails))
+                self.subject, self.reply_to))
+
+            try:
+                self.mailer.send(emails, fg=True)
+            except SMTPAuthenticationError:
+                msg = 'Invalid credentials'
+                self.logger.critical(msg)
+                raise InternalServerError(msg) from None
+            except SMTPRecipientsRefused:
+                msg = 'Recipient refused'
+                self.logger.critical(msg)
+                raise InternalServerError(msg) from None
+            else:
+                msg = 'Emails sent'
+                self.logger.success(msg)
+                return OK(msg)
         else:
             msg = 'reCAPTCHA check failed'
             self.logger.error(msg)
@@ -281,24 +301,3 @@ class Hisecon(RequestHandler):
                     email.add_header('reply-to', reply_to)
 
                 yield email
-
-    def _send_mails(self, emails):
-        """Actually send emails"""
-        mailer = Mailer(
-            self.host, self.port, self.user, self.passwd,
-            ssl=self.ssl, logger=self.logger)
-
-        try:
-            mailer.send(emails, fg=True)
-        except SMTPAuthenticationError:
-            msg = 'Invalid credentials'
-            self.logger.critical(msg)
-            raise InternalServerError(msg) from None
-        except SMTPRecipientsRefused:
-            msg = 'Recipient refused'
-            self.logger.critical(msg)
-            raise InternalServerError(msg) from None
-        else:
-            msg = 'Emails sent'
-            self.logger.success(msg)
-            return OK(msg)
