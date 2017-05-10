@@ -35,7 +35,6 @@ class Hisecon(RequestHandler):
     def __init__(self, *args, **kwargs):
         """Load site once"""
         super().__init__(*args, **kwargs)
-        print('## LOG LEVEL: {} ###'.format(self.logger.level))
         self.site = self._site
 
     @property
