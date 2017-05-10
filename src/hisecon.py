@@ -193,14 +193,49 @@ class Hisecon(RequestHandler):
         return self.smtp.get('from', self.CONFIG.mail['FROM'])
 
     @property
+    def text(self):
+        """Return the POSTed text"""
+        try:
+            return unquote(self.data.decode())
+        except ValueError:
+            raise Error('POSTed data is not a valid unicode string.') from None
+
+    @property
     def bodies(self):
         """Get message text"""
-        text = unquote(self.data.decode())
-
         if self.html:
-            return (None, text)
+            return (None, self.text)
         else:
-            return (text.replace('<br>', '\n'), None)
+            return (self.text.replace('<br>', '\n'), None)
+
+    @property
+    def template(self):
+        """Returns the optional template"""
+        try:
+            template_name = self.query['template']
+        except KeyError:
+            return None
+        else:
+            file_name = '{}.temp'.format(template_name)
+            file_path = join('/usr/share/hisecon', file_name)
+
+            try:
+                with open(file_path. 'r') as f:
+                    return f.read()
+            except FileNotFoundError:
+                raise Error('No such template: {}.'.format(
+                    template_name)) from None
+            except PermissionError:
+                raise InternalServerError('Cannot open template.')
+
+    @property
+    def dictionary(self):
+        """Returns the dictionary for data rendering"""
+        try:
+            return loads(self.text)
+        except ValueError:
+            raise Error('Not a valid JSON object: {}.'.format(
+                self.text)) from None
 
     def post(self):
         """Handles POST requests
