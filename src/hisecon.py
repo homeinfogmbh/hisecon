@@ -35,27 +35,31 @@ class Hisecon(RequestHandler):
     def __init__(self, *args, **kwargs):
         """Load site once"""
         super().__init__(*args, **kwargs)
-        self.site = self._site
 
-    @property
-    def _sites_text(self):
-        """Loads the text from the configurations file"""
         try:
             with open(self.JSON) as f:
-                return f.read()
+                json = f.read()
         except FileNotFoundError:
             self.logger.error('Sites file not found: {}'.format(self.JSON))
+            raise InternalServerError('Sites file not found.') from None
         except PermissionError:
             self.logger.error('Cannot read sites file: {}'.format(self.JSON))
-
-    @property
-    def sites(self):
-        """Loads the configurations dictionary"""
-        try:
-            return loads(self._sites_text)
-        except ValueError:
-            self.logger.error('Invalid content:\n{}'.format(self._sites_text))
-            return {}
+            raise InternalServerError('Sites file not readable.') from None
+        else:
+            try:
+                sites = loads(json)
+            except ValueError:
+                self.logger.error('Invalid content:\n{}'.format(json))
+                raise InternalServerError('Corrupted sites file.') from None
+            else:
+                try:
+                    self.site = sites[self.config]
+                except KeyError:
+                    msg = 'No such configuration: "{}"'.format(self.config)
+                    self.logger.warning(msg)
+                    raise Error(msg, status=400) from None
+                else:
+                    self.smtp = self.site.get('smtp', {})
 
     @property
     def remote_ip(self):
@@ -86,21 +90,6 @@ class Hisecon(RequestHandler):
             msg = 'No configuration provided'
             self.logger.warning(msg)
             raise Error(msg, status=400) from None
-
-    @property
-    def _site(self):
-        """Returns the respective configuration settings"""
-        try:
-            return self.sites[self.config]
-        except KeyError:
-            msg = 'No such configuration entry: "{}"'.format(self.config)
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
-
-    @property
-    def smtp(self):
-        """Get optional SMTP configuration"""
-        return self.site.get('smtp', {})
 
     @property
     def secret(self):
