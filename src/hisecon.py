@@ -6,8 +6,8 @@ and a token system to authenticate calling sites.
 from contextlib import suppress
 from json import loads
 from os.path import join
-from urllib.parse import unquote
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
+from urllib.parse import unquote
 
 from configparserplus import ConfigParserPlus
 from emaillib import Mailer, EMail
