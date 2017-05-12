@@ -233,6 +233,11 @@ class Hisecon(RequestHandler):
         return Mailer(self.host, self.port, self.user, self.passwd,
                       ssl=self.ssl, logger=self.logger)
 
+    @property
+    def recaptcha(self):
+        """Returns a recaptcha client"""
+        return ReCaptcha(self.secret, logger=self.logger)
+
     def post(self):
         """Handles POST requests
 
@@ -247,7 +252,7 @@ class Hisecon(RequestHandler):
             issuer
             html
         """
-        if ReCaptcha(self.secret, self.response, remote_ip=self.remote_ip):
+        if self.recaptcha.validate(self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
             emails = list(self._emails(
                 self.sender, self.recipients,
