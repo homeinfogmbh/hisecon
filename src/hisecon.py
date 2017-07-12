@@ -114,14 +114,20 @@ class Hisecon(RequestHandler):
     @property
     def default_recipients(self):
         """Yields default recipients"""
-        with suppress(KeyError):
+        try:
             return self.site['recipients']
+        except KeyError:
+            return []
 
     @property
     def additional_recipients(self):
         """Yields the optional additional recipients"""
-        with suppress(KeyError):
-            for recipient in self.query['recipients'].split(','):
+        try:
+            recipients = self.query['recipients'].split(',')
+        except KeyError:
+            pass
+        else:
+            for recipient in recipients:
                 recipient = recipient.strip()
 
                 if recipient:
