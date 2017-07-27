@@ -77,9 +77,15 @@ class Hisecon(RequestHandler):
         return self.query.get('reply_to')
 
     @property
-    def html(self):
-        """Returns the HTML format flag"""
-        return True if self.query.get('html') else False
+    def format(self):
+        """Returns the desired format"""
+        try:
+            return self.query['format']
+        except KeyError:
+            if self.query.get('html') is not None:
+                return 'html'
+            else:
+                return 'text'
 
     @property
     def config(self):
@@ -193,45 +199,56 @@ class Hisecon(RequestHandler):
         """Return the POSTed text"""
         try:
             return unquote(self.data.decode())
+        except AttributeError:
+            raise Error('No data provided.') from None
         except ValueError:
             raise Error('POSTed data is not a valid unicode string.') from None
 
     @property
-    def bodies(self):
-        """Get message text"""
-        if self.html:
-            return (None, self.text)
-        else:
-            return (self.text.replace('<br>', '\n'), None)
+    def json(self):
+        """Returns the POSTed JSON data"""
+        try:
+            return loads(self.data.decode())
+        except AttributeError:
+            raise Error('No data provided.') from None
+        except ValueError:
+            raise Error('Invalid JSON data.') from None
 
     @property
     def template(self):
         """Returns the optional template"""
-        try:
-            template_name = self.query['template']
-        except KeyError:
-            return None
-        else:
-            file_name = '{}.temp'.format(template_name)
-            file_path = join('/usr/share/hisecon', file_name)
+        file_name = '{}.temp'.format(self.site['template'])
+        file_path = join('/usr/share/hisecon', file_name)
 
-            try:
-                with open(file_path, 'r') as f:
-                    return f.read()
-            except FileNotFoundError:
-                raise Error('No such template: {}.'.format(
-                    template_name)) from None
-            except PermissionError:
-                raise InternalServerError('Cannot open template.')
+        try:
+            with open(file_path, 'r') as f:
+                return f.read()
+        except FileNotFoundError:
+            raise InternalServerError('Template not found.') from None
+        except PermissionError:
+            raise InternalServerError('Cannot open template.') from None
 
     @property
-    def dictionary(self):
-        """Returns the dictionary for data rendering"""
-        try:
-            return loads(self.text)
-        except ValueError:
-            raise Error('Not a valid JSON object: {}.'.format(
-                self.text)) from None
+    def body(self):
+        """Returns the emails plain text and HTML bodies"""
+        format = self.format
+
+        if format == 'html':
+            return self.text
+        elif format == 'text':
+            return self.text.replace('<br>', '\n')
+        elif format == 'json':
+            json = self.json
+
+            try:
+                template = self.template
+            except KeyError:
+                raise Error('No template configured.') from None
+            else:
+                try:
+                    return template.format(**json)
+                except KeyError:
+                    raise Error('Invalid rendering settings.') from None
 
     @property
     def mailer(self):
@@ -256,7 +273,8 @@ class Hisecon(RequestHandler):
             recipient
             remoteip
             issuer
-            html
+            html (deprecated)
+            format (new)
         """
         if self.recaptcha.validate(self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA')
@@ -285,7 +303,12 @@ class Hisecon(RequestHandler):
 
     def _emails(self, sender, recipients, subject, reply_to):
         """Actually sends emails"""
-        body_plain, body_html = self.bodies
+        if self.format in ('html', 'json'):
+            body_plain = None
+            body_html = self.body
+        else:
+            body_plain = self.body
+            body_html = None
 
         if not body_plain and not body_html:
             msg = 'No message body provided'
