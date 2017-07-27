@@ -290,9 +290,7 @@ class Hisecon(RequestHandler):
                 self.logger.success(msg)
                 return OK(msg)
         else:
-            msg = 'reCAPTCHA check failed'
-            self.logger.error(msg)
-            raise Error(msg, status=400) from None
+            raise self.logerr('reCAPTCHA check failed.') from None
 
     def _emails(self, sender, recipients, subject, reply_to):
         """Actually sends emails"""
