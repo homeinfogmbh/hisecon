@@ -261,16 +261,17 @@ class Hisecon(RequestHandler):
         """Handles POST requests
 
         Required params:
-            config
-            response
-            subject
+            config=<configuration>
+            response=<recaptcha_response>
+            subject=<email_subject>
 
         Optional params:
-            recipient
-            remoteip
-            issuer
+            recipient=<recipient> (deprecated)
+            recipients=<recipeint>[,<recipient>...]
+            remoteip=<remote_ip>
+            issuer=<issuer>
             html (deprecated)
-            format (new)
+            format=(html,text,json) (new)
         """
         if self.recaptcha.validate(self.response, remote_ip=self.remote_ip):
             self.logger.info('Got valid reCAPTCHA.')
