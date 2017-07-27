@@ -67,11 +67,6 @@ class Hisecon(RequestHandler):
         return self.query.get('remoteip')
 
     @property
-    def issuer(self):
-        """Returns the optional issuer address"""
-        return self.query.get('issuer')
-
-    @property
     def reply_to(self):
         """Returns the optional reply-to address"""
         return self.query.get('reply_to')
@@ -93,9 +88,7 @@ class Hisecon(RequestHandler):
         try:
             return self.query['config']
         except KeyError:
-            msg = 'No configuration provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
+            raise self.logerr('No configuration provided.') from None
 
     @property
     def secret(self):
@@ -103,9 +96,8 @@ class Hisecon(RequestHandler):
         try:
             return self.site['secret']
         except KeyError:
-            msg = 'No secret specified for configuration'
-            self.logger.critical(msg)
-            raise InternalServerError(msg) from None
+            raise self.logerr(
+                'No secret specified for configuration.', status=500) from None
 
     @property
     def response(self):
@@ -113,9 +105,12 @@ class Hisecon(RequestHandler):
         try:
             return self.query['response']
         except KeyError:
-            msg = 'No reCAPTCHA response provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
+            raise self.logerr('No reCAPTCHA response provided.') from None
+
+    @property
+    def issuer(self):
+        """Returns the optional issuer address"""
+        return self.query.get('issuer')
 
     @property
     def default_recipients(self):
@@ -277,7 +272,7 @@ class Hisecon(RequestHandler):
             format (new)
         """
         if self.recaptcha.validate(self.response, remote_ip=self.remote_ip):
-            self.logger.info('Got valid reCAPTCHA')
+            self.logger.info('Got valid reCAPTCHA.')
             emails = list(self._emails(
                 self.sender, self.recipients,
                 self.subject, self.reply_to))
@@ -285,15 +280,11 @@ class Hisecon(RequestHandler):
             try:
                 self.mailer.send(emails, fg=True)
             except SMTPAuthenticationError:
-                msg = 'Invalid credentials'
-                self.logger.critical(msg)
-                raise InternalServerError(msg) from None
+                raise self.logerr('Invalid credentials.', status=500) from None
             except SMTPRecipientsRefused:
-                msg = 'Recipient refused'
-                self.logger.critical(msg)
-                raise InternalServerError(msg) from None
+                raise self.logerr('Recipient refused.', status=500) from None
             else:
-                msg = 'Emails sent'
+                msg = 'Emails sent.'
                 self.logger.success(msg)
                 return OK(msg)
         else:
@@ -311,9 +302,7 @@ class Hisecon(RequestHandler):
             body_html = None
 
         if not body_plain and not body_html:
-            msg = 'No message body provided'
-            self.logger.warning(msg)
-            raise Error(msg, status=400) from None
+            raise self.logerr('No message body provided.') from None
         else:
             for recipient in recipients:
                 email = EMail(
