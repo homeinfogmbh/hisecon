@@ -12,7 +12,8 @@ from urllib.parse import unquote
 from configparserplus import ConfigParserPlus
 from emaillib import Mailer, EMail
 from recaptcha import ReCaptcha
-from wsgilib import escape_object, OK, Error, InternalServerError, RequestHandler
+from wsgilib import escape_object, OK, Error, InternalServerError, \
+    RequestHandler
 
 __all__ = ['Hisecon']
 
