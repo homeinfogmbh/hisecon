@@ -7,8 +7,8 @@ setup(
     name='hisecon',
     version='latest',
     author='Richard Neumann',
-    package_dir={'homeinfo': 'src'},
-    py_modules=['homeinfo.hisecon'],
+    package_dir={'': 'src'},
+    py_modules=['hisecon'],
     data_files=[
         ('/etc/uwsgi/apps-available', [
             'src/hisecon.ini']),
