@@ -12,7 +12,7 @@ from urllib.parse import unquote
 from configparserplus import ConfigParserPlus
 from emaillib import Mailer, EMail
 from recaptcha import ReCaptcha
-from wsgilib import OK, Error, InternalServerError, RequestHandler
+from wsgilib import escape_object, OK, Error, InternalServerError, RequestHandler
 
 __all__ = ['Hisecon']
 
@@ -233,7 +233,7 @@ class Hisecon(RequestHandler):
         elif format == 'text':
             return self.text.replace('<br>', '\n')
         elif format == 'json':
-            json = self.json
+            json = escape_object(self.json)
 
             try:
                 template = self.template
