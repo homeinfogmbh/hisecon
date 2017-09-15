@@ -221,7 +221,7 @@ class Hisecon(RequestHandler):
                 self.subject, self.query.get('reply_to')))
 
             try:
-                self.mailer.send(emails, fg=True)
+                self.mailer.send(emails, background=False)
             except SMTPAuthenticationError:
                 raise self.logerr('Invalid credentials.', status=500) from None
             except SMTPRecipientsRefused:
