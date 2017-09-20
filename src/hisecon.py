@@ -9,7 +9,7 @@ from os.path import join
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 from urllib.parse import unquote
 
-from configparserplus import ConfigParserPlus
+from configlib import INIParser
 from emaillib import Mailer, EMail
 from recaptcha import ReCaptcha
 from wsgilib import escape_object, OK, Error, InternalServerError, \
@@ -19,7 +19,7 @@ __all__ = ['Hisecon']
 
 
 JSON = '/etc/hisecon.json'
-CONFIG = ConfigParserPlus('/etc/hisecon.conf', alert=True)
+CONFIG = INIParser('/etc/hisecon.conf', alert=True)
 
 
 class Hisecon(RequestHandler):
