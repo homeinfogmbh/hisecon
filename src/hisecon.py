@@ -120,26 +120,6 @@ class Hisecon(RequestHandler):
             return CONFIG['mail']['FROM']
 
     @property
-    def text(self):
-        """Return the POSTed text."""
-        try:
-            return unquote(self.data.decode())
-        except AttributeError:
-            raise Error('No data provided.') from None
-        except ValueError:
-            raise Error('POSTed data is not a valid unicode string.') from None
-
-    @property
-    def json(self):
-        """Returns the POSTed JSON data."""
-        try:
-            return loads(self.data.decode())
-        except AttributeError:
-            raise Error('No data provided.') from None
-        except ValueError:
-            raise Error('Invalid JSON data.') from None
-
-    @property
     def template(self):
         """Returns the optional template."""
         file_name = '{}.temp'.format(self.config['template'])
@@ -159,11 +139,11 @@ class Hisecon(RequestHandler):
         frmt = self.format
 
         if frmt == 'html':
-            return self.text
+            return self.data.text
         elif frmt == 'text':
-            return self.text.replace('<br>', '\n')
+            return self.data.text.replace('<br>', '\n')
         elif frmt == 'json':
-            json = escape_object(self.json)
+            json = escape_object(self.data.json)
 
             try:
                 template = self.template
