@@ -12,7 +12,7 @@ from urllib.parse import unquote
 from configlib import INIParser
 from emaillib import Mailer, EMail
 from recaptcha import ReCaptcha
-from wsgilib import escape_object, OK, Error, InternalServerError, \
+from wsgilib import OK, Error, InternalServerError, \
     RequestHandler
 
 __all__ = ['Hisecon']
@@ -143,17 +143,15 @@ class Hisecon(RequestHandler):
         elif frmt == 'text':
             return self.data.text.replace('<br>', '\n')
         elif frmt == 'json':
-            json = escape_object(self.data.json)
-
             try:
                 template = self.template
             except KeyError:
                 raise Error('No template configured.') from None
-            else:
-                try:
-                    return template.format(**json)
-                except KeyError:
-                    raise Error('Invalid rendering settings.') from None
+
+            try:
+                return template.format(**self.data.json)
+            except KeyError:
+                raise Error('Invalid rendering settings.') from None
 
     @property
     def mailer(self):
