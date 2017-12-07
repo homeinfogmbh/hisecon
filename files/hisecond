@@ -1,0 +1,53 @@
+#! /usr/bin/env python3
+"""HOMEINFO Secure Contact form.
+
+This project provides a secure web mailer using reCaptcha by
+Google Inc. and a token system to authenticate calling sites.
+"""
+from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
+
+from wsgilib import Error, Application
+
+from hisecon import CONFIG, ARGS, RECAPTCHA, RESPONSE, MAILER, EMAILS
+
+__all__ = ['APPLICATION']
+
+APPLICATION = Application('hisecon')
+
+
+@APPLICATION.route('/', methods=['POST'])
+def send_emails():
+    """Sends emails.
+
+    Required params:
+        config=<configuration>
+        response=<recaptcha_response>
+        subject=<email_subject>
+
+    Optional params:
+        recipient=<recipient> (deprecated)
+        recipients=<recipeint>[,<recipient>...]
+        remoteip=<remote_ip>
+        issuer=<issuer>
+        html (deprecated)
+        format=(html,text,json) (new)
+    """
+    if RECAPTCHA.validate(RESPONSE, remote_ip=ARGS.get('remoteip')):
+        emails = tuple(EMAILS)
+
+        try:
+            MAILER.send(emails, background=False)
+        except SMTPAuthenticationError:
+            raise Error('Invalid mailer credentials.', status=500)
+        except SMTPRecipientsRefused:
+            raise Error('Recipient refused.', status=500)
+
+        return 'Emails sent.'
+
+    raise Error('reCAPTCHA check failed.')
+
+
+if __name__ == '__main__':
+    HOST = CONFIG['wsgi']['host']
+    PORT = int(CONFIG['wsgi']['port'])
+    APPLICATION.run(host=HOST, port=PORT)

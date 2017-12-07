@@ -9,9 +9,6 @@ setup(
     author='Richard Neumann',
     package_dir={'': 'src'},
     py_modules=['hisecon'],
-    data_files=[
-        ('/etc/uwsgi/apps-available', [
-            'src/hisecon.ini']),
-        ('/usr/share', [
-            'src/hisecon.wsgi'])],
+    scripts=['files/hisecond'],
+    data_files=[('/usr/lib/systemd/system', ['files/hisecon.service'])],
     description='HOMEINFO Secure Contact form')
