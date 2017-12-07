@@ -23,6 +23,7 @@ __all__ = [
 
 JSON = '/etc/hisecon.json'
 CONFIG = INIParser('/etc/hisecon.conf', alert=True)
+DATA = PostData()
 
 
 def _strip(string):
@@ -31,7 +32,7 @@ def _strip(string):
     return string.strip()
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=1)   # Only read file once.
 def _load_sites():
     """Reads the sites configuration from the JSON file."""
 
@@ -123,9 +124,9 @@ def _load_body():
     """Returns the emails plain text and HTML bodies."""
 
     if FORMAT == 'html':
-        return PostData().text
+        return DATA.text
     elif FORMAT == 'text':
-        return PostData().text.replace('<br>', '\n')
+        return DATA.text.replace('<br>', '\n')
 
 
 def _load_mailer():
