@@ -16,9 +16,9 @@ __all__ = [
     'CONFIG',
     'ARGS',
     'RECAPTCHA',
-    'RESPONSE',
     'MAILER',
-    'EMAILS']
+    'get_response',
+    'get_emails']
 
 
 JSON = '/etc/hisecon.json'
@@ -70,65 +70,6 @@ def _load_recaptcha():
         raise Error('No secret specified for configuration.', status=500)
 
 
-def _load_response():
-    """Returns the respective reCAPTCHA response."""
-
-    try:
-        return ARGS['response']
-    except KeyError:
-        raise Error('No reCAPTCHA response provided.')
-
-
-def _load_format():
-    """Returns the desired format."""
-
-    try:
-        return ARGS['format']
-    except KeyError:
-        if ARGS.get('html', False):
-            return 'html'
-
-        return 'text'
-
-
-def _load_recipients():
-    """Yields all recipients."""
-
-    yield from SITE.get('recipients', ())
-
-    with suppress(KeyError):
-        yield from filter(None, map(_strip, ARGS['recipients'].split(',')))
-
-    with suppress(KeyError):
-        yield ARGS['issuer']
-
-
-def _load_subject():
-    """Returns the respective subject."""
-
-    try:
-        return ARGS['subject']
-    except KeyError:
-        raise Error('No subject provided', status=400)
-
-
-def _load_sender():
-    """Returns the specified sender's email address."""
-
-    try:
-        return SITE['smtp']['from']
-    except KeyError:
-        return CONFIG['mail']['from']
-
-def _load_body():
-    """Returns the emails plain text and HTML bodies."""
-
-    if FORMAT == 'html':
-        return DATA.text
-    elif FORMAT == 'text':
-        return DATA.text.replace('<br>', '\n')
-
-
 def _load_mailer():
     """Returns an appropriate mailer."""
 
@@ -141,21 +82,83 @@ def _load_mailer():
     return Mailer(host, port, user, passwd, ssl=ssl)
 
 
-def _load_emails():
+def get_response():
+    """Returns the respective reCAPTCHA response."""
+
+    try:
+        return ARGS['response']
+    except KeyError:
+        raise Error('No reCAPTCHA response provided.')
+
+
+def get_format():
+    """Returns the desired format."""
+
+    try:
+        return ARGS['format']
+    except KeyError:
+        if ARGS.get('html', False):
+            return 'html'
+
+        return 'text'
+
+
+def get_recipients():
+    """Yields all recipients."""
+
+    yield from SITE.get('recipients', ())
+
+    with suppress(KeyError):
+        yield from filter(None, map(_strip, ARGS['recipients'].split(',')))
+
+    with suppress(KeyError):
+        yield ARGS['issuer']
+
+
+def get_subject():
+    """Returns the respective subject."""
+
+    try:
+        return ARGS['subject']
+    except KeyError:
+        raise Error('No subject provided', status=400)
+
+
+def get_sender():
+    """Returns the specified sender's email address."""
+
+    try:
+        return SITE['smtp']['from']
+    except KeyError:
+        return CONFIG['mail']['from']
+
+def get_body():
+    """Returns the emails plain text and HTML bodies."""
+
+    frmt = get_format()
+
+    if frmt == 'html':
+        return DATA.text
+    elif frmt == 'text':
+        return DATA.text.replace('<br>', '\n')
+
+
+def get_emails():
     """Actually sends emails"""
 
-    if FORMAT in ('html', 'json'):
+    if get_format() in ('html', 'json'):
         plain = None
-        html = BODY
+        html = get_body()
     else:
-        plain = BODY
+        plain = get_body()
         html = None
 
     if not plain and not html:
         raise Error('No message body provided.')
 
-    for recipient in RECIPIENTS:
-        email = EMail(SUBJECT, SENDER, recipient, plain=plain, html=html)
+    for recipient in get_recipients():
+        email = EMail(
+            get_subject(), get_sender(), recipient, plain=plain, html=html)
         reply_to = ARGS.get('reply_to')
 
         if reply_to is not None:
@@ -167,11 +170,4 @@ def _load_emails():
 ARGS = LocalProxy(lambda: request.args)
 SITE = LocalProxy(_load_site)
 RECAPTCHA = LocalProxy(_load_recaptcha)
-RESPONSE = LocalProxy(_load_response)
-FORMAT = LocalProxy(_load_format)
-RECIPIENTS = LocalProxy(_load_recipients)
-SUBJECT = LocalProxy(_load_subject)
-SENDER = LocalProxy(_load_sender)
-BODY = LocalProxy(_load_body)
 MAILER = LocalProxy(_load_mailer)
-EMAILS = LocalProxy(_load_emails)

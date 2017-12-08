@@ -8,7 +8,7 @@ from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
 from wsgilib import Error, Application
 
-from hisecon import CONFIG, ARGS, RECAPTCHA, RESPONSE, MAILER, EMAILS
+from hisecon import CONFIG, ARGS, RECAPTCHA, MAILER, get_emails, get_response
 
 __all__ = ['APPLICATION']
 
@@ -32,8 +32,8 @@ def send_emails():
         html (deprecated)
         format=(html,text,json) (new)
     """
-    if RECAPTCHA.validate(RESPONSE, remote_ip=ARGS.get('remoteip')):
-        emails = tuple(EMAILS)
+    if RECAPTCHA.validate(get_response(), remote_ip=ARGS.get('remoteip')):
+        emails = tuple(get_emails())
 
         try:
             MAILER.send(emails, background=False)
