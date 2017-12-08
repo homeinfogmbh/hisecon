@@ -7,7 +7,6 @@ setup(
     name='hisecon',
     version='latest',
     author='Richard Neumann',
-    package_dir={'': 'src'},
     py_modules=['hisecon'],
     scripts=['files/hisecond'],
     data_files=[('/usr/lib/systemd/system', ['files/hisecon.service'])],
