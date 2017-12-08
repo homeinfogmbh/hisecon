@@ -12,7 +12,7 @@ from hisecon import CONFIG, ARGS, RECAPTCHA, RESPONSE, MAILER, EMAILS
 
 __all__ = ['APPLICATION']
 
-APPLICATION = Application('hisecon')
+APPLICATION = Application('hisecon', cors=True, debug=True)
 
 
 @APPLICATION.route('/', methods=['POST'])
