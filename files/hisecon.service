@@ -1,6 +1,5 @@
 [Unit]
 Description=HomeInfo SEcure CONtact form
-After=network.target
 
 [Service]
 User=hisecon
@@ -8,4 +7,4 @@ Group=hisecon
 ExecStart=/usr/local/bin/hisecond
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=wsgi-services.target
