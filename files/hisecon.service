@@ -1,5 +1,6 @@
 [Unit]
 Description=HomeInfo SEcure CONtact form
+PartOf=wsgi-services.target
 
 [Service]
 User=hisecon
