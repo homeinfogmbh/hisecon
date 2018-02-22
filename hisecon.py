@@ -1,4 +1,7 @@
-"""HISECON API globals."""
+"""HOMEINFO Secure Contact Form.
+
+A secure and spam-resistent email backend.
+"""
 
 from contextlib import suppress
 from functools import lru_cache
