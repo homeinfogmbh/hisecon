@@ -6,6 +6,7 @@ A secure and spam-resistent email backend.
 from contextlib import suppress
 from functools import lru_cache
 from json import load
+from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
 from flask import request
 from werkzeug.local import LocalProxy
@@ -13,20 +14,15 @@ from werkzeug.local import LocalProxy
 from configlib import INIParser
 from emaillib import Mailer, EMail
 from recaptcha import ReCaptcha
-from wsgilib import Error, PostData
+from wsgilib import Error, PostData, Application
 
-__all__ = [
-    'CONFIG',
-    'ARGS',
-    'RECAPTCHA',
-    'MAILER',
-    'get_response',
-    'get_emails']
+__all__ = ['CONFIG', 'APPLICATION']
 
 
 JSON = '/etc/hisecon.json'
 CONFIG = INIParser('/etc/hisecon.conf', alert=True)
 DATA = PostData()
+APPLICATION = Application('hisecon', cors=True, debug=True)
 
 
 def _strip(string):
@@ -54,7 +50,7 @@ def _load_site():
     """Loads the site configuration JSON file."""
 
     try:
-        config = ARGS['config']
+        config = request.args['config']
     except KeyError:
         raise Error('No configuration provided.')
 
@@ -64,6 +60,9 @@ def _load_site():
         raise Error('No such configuration: "{}".'.format(config), status=400)
 
 
+SITE = LocalProxy(_load_site)
+
+
 def _load_recaptcha():
     """Loads the respective ReCAPTCHA client."""
 
@@ -71,6 +70,9 @@ def _load_recaptcha():
         return ReCaptcha(SITE['secret'])
     except KeyError:
         raise Error('No secret specified for configuration.', status=500)
+
+
+RECAPTCHA = LocalProxy(_load_recaptcha)
 
 
 def _load_mailer():
@@ -85,11 +87,14 @@ def _load_mailer():
     return Mailer(host, port, user, passwd, ssl=ssl)
 
 
+MAILER = LocalProxy(_load_mailer)
+
+
 def get_response():
     """Returns the respective reCAPTCHA response."""
 
     try:
-        return ARGS['response']
+        return request.args['response']
     except KeyError:
         raise Error('No reCAPTCHA response provided.')
 
@@ -98,9 +103,9 @@ def get_format():
     """Returns the desired format."""
 
     try:
-        return ARGS['format']
+        return request.args['format']
     except KeyError:
-        if ARGS.get('html', False):
+        if request.args.get('html', False):
             return 'html'
 
         return 'text'
@@ -112,17 +117,17 @@ def get_recipients():
     yield from SITE.get('recipients', ())
 
     with suppress(KeyError):
-        yield from filter(None, map(_strip, ARGS['recipients'].split(',')))
+        yield from filter(None, map(_strip, request.args['recipients'].split(',')))
 
     with suppress(KeyError):
-        yield ARGS['issuer']
+        yield request.args['issuer']
 
 
 def get_subject():
     """Returns the respective subject."""
 
     try:
-        return ARGS['subject']
+        return request.args['subject']
     except KeyError:
         raise Error('No subject provided', status=400)
 
@@ -135,15 +140,16 @@ def get_sender():
     except KeyError:
         return CONFIG['mail']['from']
 
+
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
     frmt = get_format()
 
-    if frmt == 'html':
-        return DATA.text
-    elif frmt == 'text':
+    if frmt == 'text':
         return DATA.text.replace('<br>', '\n')
+
+    return DATA.text
 
 
 def get_emails():
@@ -162,7 +168,7 @@ def get_emails():
     for recipient in get_recipients():
         email = EMail(
             get_subject(), get_sender(), recipient, plain=plain, html=html)
-        reply_to = ARGS.get('reply_to')
+        reply_to = request.args.get('reply_to')
 
         if reply_to is not None:
             email.add_header('reply-to', reply_to)
@@ -170,7 +176,33 @@ def get_emails():
         yield email
 
 
-ARGS = LocalProxy(lambda: request.args)
-SITE = LocalProxy(_load_site)
-RECAPTCHA = LocalProxy(_load_recaptcha)
-MAILER = LocalProxy(_load_mailer)
+@APPLICATION.route('/', methods=['POST'])
+def send_emails():
+    """Sends emails.
+
+    Required params:
+        config=<configuration>
+        response=<recaptcha_response>
+        subject=<email_subject>
+
+    Optional params:
+        recipient=<recipient> (deprecated)
+        recipients=<recipeint>[,<recipient>...]
+        remoteip=<remote_ip>
+        issuer=<issuer>
+        html (deprecated)
+        format=(html,text,json) (new)
+    """
+    if RECAPTCHA.validate(get_response(), remote_ip=request.args.get('remoteip')):
+        emails = tuple(get_emails())
+
+        try:
+            MAILER.send(emails, background=False)
+        except SMTPAuthenticationError:
+            raise Error('Invalid mailer credentials.', status=500)
+        except SMTPRecipientsRefused:
+            raise Error('Recipient refused.', status=500)
+
+        return 'Emails sent.'
+
+    raise Error('reCAPTCHA check failed.')

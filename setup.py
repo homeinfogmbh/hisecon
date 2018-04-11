@@ -8,6 +8,4 @@ setup(
     version='latest',
     author='Richard Neumann',
     py_modules=['hisecon'],
-    scripts=['files/hisecond'],
-    data_files=[('/usr/lib/systemd/system', ['files/hisecon.service'])],
     description='HOMEINFO Secure Contact form')
