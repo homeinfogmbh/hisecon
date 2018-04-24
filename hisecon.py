@@ -25,12 +25,6 @@ DATA = PostData()
 APPLICATION = Application('hisecon', cors=True, debug=True)
 
 
-def _strip(string):
-    """Strips the respective string."""
-
-    return string.strip()
-
-
 @lru_cache(maxsize=1)   # Only read file once.
 def _load_sites():
     """Reads the sites configuration from the JSON file."""
@@ -116,8 +110,12 @@ def get_recipients():
 
     yield from SITE.get('recipients', ())
 
-    with suppress(KeyError):
-        yield from filter(None, map(_strip, request.args['recipients'].split(',')))
+    try:
+        recipients = request.args['recipients']
+    except KeyError:
+        pass
+    else:
+        yield from filter(None, map(str.strip, recipients.rsplit(',')))
 
     with suppress(KeyError):
         yield request.args['issuer']
@@ -193,7 +191,9 @@ def send_emails():
         html (deprecated)
         format=(html,text,json) (new)
     """
-    if RECAPTCHA.validate(get_response(), remote_ip=request.args.get('remoteip')):
+    remote_ip = request.args.get('remoteip')
+
+    if RECAPTCHA.validate(get_response(), remote_ip=remote_ip):
         emails = tuple(get_emails())
 
         try:
