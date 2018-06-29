@@ -4,40 +4,23 @@ A secure and spam-resistent email backend.
 """
 
 from contextlib import suppress
-from functools import lru_cache
-from json import load
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
 from flask import request
 from werkzeug.local import LocalProxy
 
-from configlib import INIParser
+from configlib import INIParser, JSONParser
 from emaillib import Mailer, EMail
 from recaptcha import VerificationError, ReCaptcha
 from wsgilib import Error, PostData, Application
 
-__all__ = ['CONFIG', 'APPLICATION']
+__all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 
-JSON = '/etc/hisecon.json'
 CONFIG = INIParser('/etc/hisecon.conf', alert=True)
+JSON = JSONParser('/etc/hisecon.json')
 DATA = PostData()
 APPLICATION = Application('hisecon', cors=True, debug=True)
-
-
-@lru_cache(maxsize=1)   # Only read file once.
-def _load_sites():
-    """Reads the sites configuration from the JSON file."""
-
-    try:
-        with open(JSON) as json:
-            return load(json)
-    except FileNotFoundError:
-        raise Error('Sites file not found.', status=500)
-    except PermissionError:
-        raise Error('Sites file not readable.', status=500)
-    except ValueError:
-        raise Error('Corrupted sites file.', status=500)
 
 
 def _load_site():
@@ -49,7 +32,7 @@ def _load_site():
         raise Error('No configuration provided.')
 
     try:
-        return _load_sites()[config]
+        return JSON[config]
     except KeyError:
         raise Error('No such configuration: "{}".'.format(config), status=400)
 
