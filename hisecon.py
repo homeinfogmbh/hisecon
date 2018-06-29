@@ -18,7 +18,7 @@ __all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 
 CONFIG = INIParser('/etc/hisecon.conf', alert=True)
-JSON = JSONParser('/etc/hisecon.json')
+JSON = JSONParser('/etc/hisecon.json', alert=True)
 DATA = PostData()
 APPLICATION = Application('hisecon', cors=True, debug=True)
 
