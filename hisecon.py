@@ -13,7 +13,7 @@ from werkzeug.local import LocalProxy
 
 from configlib import INIParser
 from emaillib import Mailer, EMail
-from recaptcha import ReCaptcha
+from recaptcha import VerificationError, ReCaptcha
 from wsgilib import Error, PostData, Application
 
 __all__ = ['CONFIG', 'APPLICATION']
@@ -193,16 +193,18 @@ def send_emails():
     """
     remote_ip = request.args.get('remoteip')
 
-    if RECAPTCHA.validate(get_response(), remote_ip=remote_ip):
-        emails = tuple(get_emails())
+    try:
+        RECAPTCHA.verify(get_response(), remote_ip=remote_ip)
+    except VerificationError:
+        raise Error('reCAPTCHA check failed.')
 
-        try:
-            MAILER.send(emails, background=False)
-        except SMTPAuthenticationError:
-            raise Error('Invalid mailer credentials.', status=500)
-        except SMTPRecipientsRefused:
-            raise Error('Recipient refused.', status=500)
+    emails = tuple(get_emails())
 
-        return 'Emails sent.'
+    try:
+        MAILER.send(emails, background=False)
+    except SMTPAuthenticationError:
+        raise Error('Invalid mailer credentials.', status=500)
+    except SMTPRecipientsRefused:
+        raise Error('Recipient refused.', status=500)
 
-    raise Error('reCAPTCHA check failed.')
+    return 'Emails sent.'
