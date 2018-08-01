@@ -12,14 +12,14 @@ from werkzeug.local import LocalProxy
 from configlib import INIParser, JSONParser
 from emaillib import Mailer, EMail
 from recaptcha import VerificationError, ReCaptcha
-from wsgilib import Error, PostData, Application
+from wsgilib import Error, Application
+
 
 __all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 
 CONFIG = INIParser('/etc/hisecon.conf', alert=True)
 JSON = JSONParser('/etc/hisecon.json', alert=True)
-DATA = PostData()
 APPLICATION = Application('hisecon', cors=True, debug=True)
 
 
@@ -125,12 +125,14 @@ def get_sender():
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
-    frmt = get_format()
+    # TODO: This is a hack until all clients send
+    # data with correct "ContentType" settings.
+    text = request.get_data(as_text=True)
 
-    if frmt == 'text':
-        return DATA.text.replace('<br>', '\n')
+    if get_format() == 'text':
+        return text.replace('<br>', '\n')
 
-    return DATA.text
+    return text
 
 
 def get_emails():
