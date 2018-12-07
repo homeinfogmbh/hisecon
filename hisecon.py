@@ -9,7 +9,7 @@ from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 from flask import request
 from werkzeug.local import LocalProxy
 
-from configlib import loadcfg, JSONParser
+from configlib import load_ini, load_json
 from emaillib import Mailer, EMail
 from recaptcha import VerificationError, ReCaptcha
 from wsgilib import Error, Application
@@ -18,8 +18,8 @@ from wsgilib import Error, Application
 __all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 
-CONFIG = loadcfg('hisecon.conf')
-JSON = JSONParser('/usr/local/etc/hisecon.json', alert=True)
+CONFIG = load_ini('hisecon.conf')
+JSON = load_json('hisecon.json')
 APPLICATION = Application('hisecon', cors=True, debug=True)
 
 
