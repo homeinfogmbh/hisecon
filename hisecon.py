@@ -11,7 +11,7 @@ from werkzeug.local import LocalProxy
 
 from configlib import load_ini, load_json
 from emaillib import Mailer, EMail
-from recaptcha import VerificationError, ReCaptcha
+from recaptcha import VerificationError, verify
 from wsgilib import Error, Application
 
 
@@ -40,16 +40,13 @@ def _load_site():
 SITE = LocalProxy(_load_site)
 
 
-def _load_recaptcha():
-    """Loads the respective ReCAPTCHA client."""
+def _load_secret():
+    """Loads the respective ReCAPTCHA secret."""
 
     try:
-        return ReCaptcha(SITE['secret'])
+        return SITE['secret']
     except KeyError:
         raise Error('No secret specified for configuration.', status=500)
-
-
-RECAPTCHA = LocalProxy(_load_recaptcha)
 
 
 def _load_mailer():
@@ -125,7 +122,7 @@ def get_sender():
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
-    # TODO: This is a hack until all clients send
+    # XXX: This is a hack until all clients send
     # data with correct "ContentType" settings.
     text = request.get_data(as_text=True)
 
@@ -179,7 +176,7 @@ def send_emails():
     remote_ip = request.args.get('remoteip')
 
     try:
-        RECAPTCHA.verify(get_response(), remote_ip=remote_ip)
+        verify(_load_secret(), get_response(), remote_ip=remote_ip)
     except VerificationError:
         raise Error('reCAPTCHA check failed.')
 
