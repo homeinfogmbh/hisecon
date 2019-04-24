@@ -1,6 +1,6 @@
 """HOMEINFO Secure Contact Form.
 
-A secure and spam-resistent email backend.
+A secure and spam-resistant email backend.
 """
 
 from contextlib import suppress
