@@ -34,7 +34,7 @@ def _load_site():
     try:
         return JSON[config]
     except KeyError:
-        raise Error('No such configuration: "{}".'.format(config), status=400)
+        raise Error(f'No such configuration: "{config}".', status=400)
 
 
 SITE = LocalProxy(_load_site)
