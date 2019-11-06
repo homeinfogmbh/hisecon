@@ -20,7 +20,7 @@ __all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 CONFIG = load_ini('hisecon.conf')
 JSON = load_json('hisecon.json')
-APPLICATION = Application('hisecon', cors=True, debug=True)
+APPLICATION = Application('hisecon', debug=True)
 
 
 def _load_site():
