@@ -4,6 +4,7 @@ A secure and spam-resistant email backend.
 """
 
 from contextlib import suppress
+from logging import DEBUG, INFO, basicConfig, getLogger
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
 from flask import request
@@ -18,9 +19,11 @@ from wsgilib import Error, Application
 __all__ = ['CONFIG', 'JSON', 'APPLICATION']
 
 
+APPLICATION = Application('hisecon', debug=True, cors=True)
 CONFIG = load_ini('hisecon.conf')
 JSON = load_json('hisecon.json')
-APPLICATION = Application('hisecon', debug=True, cors=True)
+LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
+LOGGER = getLogger('hisecon')
 
 
 def _load_site():
@@ -124,25 +127,30 @@ def get_sender():
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
+    format = get_format()   # pylint: disable=W0622
     # XXX: This is a hack until all clients send
     # data with correct "ContentType" settings.
     text = request.get_data(as_text=True)
 
-    if get_format() == 'text':
-        return text.replace('<br>', '\n')
+    if format == 'html':
+        LOGGER.info('Email format is: HTML.')
+        return (None, text)
 
-    return text
+    if format == 'json':
+        LOGGER.info('Email format is: JSON.')
+        return (None, text)
+
+    if format != 'text':
+        LOGGER.warning('Unknown fornat. Defaulting to plain text.')
+
+    LOGGER.info('Email format is: plain text.')
+    return (text.replace('<br>', '\n'), None)
 
 
 def get_emails():
     """Actually sends emails"""
 
-    if get_format() in ('html', 'json'):
-        plain = None
-        html = get_body()
-    else:
-        plain = get_body()
-        html = None
+    plain, html = get_body()
 
     if not plain and not html:
         raise Error('No message body provided.')
@@ -156,6 +164,14 @@ def get_emails():
             email.add_header('reply-to', reply_to)
 
         yield email
+
+
+@APPLICATION.before_first_request
+def init_logger():
+    """Initializes the logger."""
+
+    debug = CONFIG.getboolean('app', 'debug', fallback=False)
+    basicConfig(level=DEBUG if debug else INFO, format=LOG_FORMAT)
 
 
 @APPLICATION.route('/', methods=['POST'])
