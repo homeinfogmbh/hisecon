@@ -79,7 +79,9 @@ def get_format():
     try:
         return request.args['format']
     except KeyError:
-        if request.args.get('html', False):
+        html = request.args.get('html', False)
+
+        if html or html is None:
             return 'html'
 
         return 'text'
