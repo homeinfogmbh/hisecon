@@ -120,12 +120,13 @@ def get_recipients():
 
     yield from SITE.get('recipients', ())
 
-    try:
-        recipients = request.args['recipients']
-    except KeyError:
-        pass
-    else:
-        yield from filter(None, map(str.strip, recipients.rsplit(',')))
+    with suppress(KeyError):
+        yield request.args['recipient']
+
+    recipients = request.args.get('recipients')
+
+    if recipients:
+        yield from filter(None, map(str.strip, recipients.split(',')))
 
     with suppress(KeyError):
         yield request.args['issuer']
