@@ -26,18 +26,25 @@ LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
 
 
+def _error(message, status=400):
+    """Logs an error message and returns an Error."""
+
+    LOGGER.error(message)
+    return Error(message, status=status)
+
+
 def _load_site():
     """Loads the site configuration JSON file."""
 
     try:
         config = request.args['config']
     except KeyError:
-        raise Error('No configuration provided.')
+        raise _error('No configuration provided.') from None
 
     try:
         return JSON[config]
     except KeyError:
-        raise Error(f'No such configuration: "{config}".', status=400)
+        raise _error(f'No such configuration: {config}', status=400) from None
 
 
 SITE = LocalProxy(_load_site)
@@ -49,7 +56,7 @@ def _load_secret():
     try:
         return SITE['secret']
     except KeyError:
-        raise Error('No secret specified for configuration.', status=500)
+        raise _error('No secret specified.', status=500) from None
 
 
 def _load_mailer():
@@ -73,7 +80,7 @@ def get_response():
     try:
         return request.args['response']
     except KeyError:
-        raise Error('No reCAPTCHA response provided.')
+        raise _error('No reCAPTCHA response provided.') from None
 
 
 def get_format():
@@ -112,7 +119,7 @@ def get_subject():
     try:
         return request.args['subject']
     except KeyError:
-        raise Error('No subject provided', status=400)
+        raise _error('No subject provided', status=400) from None
 
 
 def get_sender():
@@ -129,7 +136,7 @@ def get_body():
 
     format = get_format()   # pylint: disable=W0622
     # XXX: This is a hack until all clients send
-    # data with correct "ContentType" settings.
+    # data with correct "Content-Type" settings.
     text = request.get_data(as_text=True)
 
     if format == 'html':
@@ -141,7 +148,7 @@ def get_body():
         return (None, text)
 
     if format != 'text':
-        LOGGER.warning('Unknown fornat. Defaulting to plain text.')
+        LOGGER.warning('Unknown format. Defaulting to plain text.')
 
     LOGGER.info('Email format is: plain text.')
     return (text.replace('<br>', '\n'), None)
@@ -196,15 +203,17 @@ def send_emails():
     try:
         verify(_load_secret(), get_response(), remote_ip=remote_ip)
     except VerificationError:
-        raise Error('reCAPTCHA check failed.')
+        raise _error('reCAPTCHA check failed.') from None
 
     emails = tuple(get_emails())
+    LOGGER.debug('Got emails: %s', emails)
 
     try:
         MAILER.send(emails, background=False)
     except SMTPAuthenticationError:
-        raise Error('Invalid mailer credentials.', status=500)
+        raise _error('Invalid mailer credentials.', status=500) from None
     except SMTPRecipientsRefused:
-        raise Error('Recipient refused.', status=500)
+        raise _error('Recipient refused.', status=500) from None
 
+    LOGGER.debug('Emails sent.')
     return 'Emails sent.'
