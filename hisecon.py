@@ -4,6 +4,7 @@ A secure and spam-resistant email backend.
 """
 
 from contextlib import suppress
+from functools import wraps
 from logging import DEBUG, INFO, basicConfig, getLogger
 from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
 
@@ -24,6 +25,21 @@ CONFIG = load_ini('hisecon.conf')
 JSON = load_json('hisecon.json')
 LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
+
+
+def debug(template):
+    """Debug logs return value."""
+
+    def decorator(function):
+        @wraps(function)
+        def wrapper(*args, **kwargs):
+            result = function(*args, **kwargs)
+            LOGGER.debug(template, result)
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 def _error(message, status=400):
@@ -74,6 +90,7 @@ def _load_mailer():
 MAILER = LocalProxy(_load_mailer)
 
 
+@debug('reCAPTCHA response: %s')
 def get_response():
     """Returns the respective reCAPTCHA response."""
 
@@ -83,6 +100,7 @@ def get_response():
         raise _error('No reCAPTCHA response provided.') from None
 
 
+@debug('Format: %s')
 def get_format():
     """Returns the desired format."""
 
@@ -113,6 +131,7 @@ def get_recipients():
         yield request.args['issuer']
 
 
+@debug('Subject: %s')
 def get_subject():
     """Returns the respective subject."""
 
@@ -122,6 +141,7 @@ def get_subject():
         raise _error('No subject provided', status=400) from None
 
 
+@debug('Sender: %s')
 def get_sender():
     """Returns the specified sender's email address."""
 
@@ -131,6 +151,7 @@ def get_sender():
         return CONFIG['mail']['from']
 
 
+@debug('Body: %s')
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
@@ -177,8 +198,8 @@ def get_emails():
 def init_logger():
     """Initializes the logger."""
 
-    debug = CONFIG.getboolean('app', 'debug', fallback=False)
-    basicConfig(level=DEBUG if debug else INFO, format=LOG_FORMAT)
+    debug_mode = CONFIG.getboolean('app', 'debug', fallback=False)
+    basicConfig(level=DEBUG if debug_mode else INFO, format=LOG_FORMAT)
 
 
 @APPLICATION.route('/', methods=['POST'])
