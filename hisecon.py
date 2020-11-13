@@ -27,14 +27,14 @@ LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
 
 
-def debug(template):
+def debug(template, getter=lambda value: [value]):
     """Debug logs return value."""
 
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
             result = function(*args, **kwargs)
-            LOGGER.debug(template, result)
+            LOGGER.debug(template, *getter(result))
             return result
 
         return wrapper
@@ -151,7 +151,7 @@ def get_sender():
         return CONFIG['mail']['from']
 
 
-@debug('Body: %s')
+@debug('Body:\n\tHTML: %s\n\tText: %s', getter=lambda tpl: tpl)
 def get_body():
     """Returns the emails plain text and HTML bodies."""
 
@@ -184,6 +184,7 @@ def get_emails():
         raise Error('No message body provided.')
 
     for recipient in get_recipients():
+        LOGGER.debug('Recipient: %s', recipient)
         email = EMail(
             get_subject(), get_sender(), recipient, plain=plain, html=html)
         reply_to = request.args.get('reply_to')
