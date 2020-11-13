@@ -178,6 +178,7 @@ def get_body():
 def get_emails():
     """Actually sends emails"""
 
+    subject, sender = get_subject(), get_sender()
     plain, html = get_body()
 
     if not plain and not html:
@@ -185,11 +186,10 @@ def get_emails():
 
     for recipient in get_recipients():
         LOGGER.debug('Recipient: %s', recipient)
-        email = EMail(
-            get_subject(), get_sender(), recipient, plain=plain, html=html)
+        email = EMail(subject, sender, recipient, plain=plain, html=html)
         reply_to = request.args.get('reply_to')
 
-        if reply_to is not None:
+        if reply_to:
             email.add_header('reply-to', reply_to)
 
         yield email
@@ -229,6 +229,9 @@ def send_emails():
 
     emails = tuple(get_emails())
     LOGGER.debug('Got emails: %s', emails)
+
+    if not emails:
+        raise _error('No recipients specified.', status=400)
 
     try:
         MAILER.send(emails, background=False)
