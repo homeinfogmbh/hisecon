@@ -235,7 +235,7 @@ def send_emails():
         raise _error('No recipients specified.', status=400)
 
     try:
-        MAILER.send(emails, background=False)
+        MAILER.send(emails)
     except SMTPAuthenticationError:
         raise _error('Invalid mailer credentials.', status=500) from None
     except SMTPRecipientsRefused:
