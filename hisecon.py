@@ -6,7 +6,7 @@ A secure and spam-resistant email backend.
 from contextlib import suppress
 from functools import wraps
 from logging import DEBUG, INFO, basicConfig, getLogger
-from smtplib import SMTPAuthenticationError, SMTPRecipientsRefused
+from typing import Callable, Generator, Tuple, Union
 
 from flask import request
 from werkzeug.local import LocalProxy
@@ -27,7 +27,7 @@ LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
 
 
-def debug(template, getter=lambda value: [value]):
+def debug(template: str, getter: Callable = lambda value: [value]) -> Callable:
     """Debug logs return value."""
 
     def decorator(function):
@@ -42,14 +42,14 @@ def debug(template, getter=lambda value: [value]):
     return decorator
 
 
-def _error(message, status=400):
+def _error(message: str, *, status: int = 400) -> Error:
     """Logs an error message and returns an Error."""
 
     LOGGER.error(message)
     return Error(message, status=status)
 
 
-def _load_site():
+def _load_site() -> dict:
     """Loads the site configuration JSON file."""
 
     try:
@@ -66,7 +66,7 @@ def _load_site():
 SITE = LocalProxy(_load_site)
 
 
-def _load_secret():
+def _load_secret() -> str:
     """Loads the respective ReCAPTCHA secret."""
 
     try:
@@ -75,7 +75,7 @@ def _load_secret():
         raise _error('No secret specified.', status=500) from None
 
 
-def _load_mailer():
+def _load_mailer() -> Mailer:
     """Returns an appropriate mailer."""
 
     smtp = SITE.get('smtp', {})
@@ -91,7 +91,7 @@ MAILER = LocalProxy(_load_mailer)
 
 
 @debug('reCAPTCHA response: %s')
-def get_response():
+def get_response() -> str:
     """Returns the respective reCAPTCHA response."""
 
     try:
@@ -101,7 +101,7 @@ def get_response():
 
 
 @debug('Format: %s')
-def get_format():
+def get_format() -> str:
     """Returns the desired format."""
 
     try:
@@ -115,7 +115,7 @@ def get_format():
         return 'text'
 
 
-def get_recipients():
+def get_recipients() -> Generator[str, None, None]:
     """Yields all recipients."""
 
     yield from SITE.get('recipients', ())
@@ -133,7 +133,7 @@ def get_recipients():
 
 
 @debug('Subject: %s')
-def get_subject():
+def get_subject() -> str:
     """Returns the respective subject."""
 
     try:
@@ -143,7 +143,7 @@ def get_subject():
 
 
 @debug('Sender: %s')
-def get_sender():
+def get_sender() -> str:
     """Returns the specified sender's email address."""
 
     try:
@@ -153,7 +153,7 @@ def get_sender():
 
 
 @debug('Body:\n\tHTML: %s\n\tText: %s', getter=lambda tpl: tpl)
-def get_body():
+def get_body() -> Tuple[Union[str, None], Union[str, None]]:
     """Returns the emails plain text and HTML bodies."""
 
     format = get_format()   # pylint: disable=W0622
@@ -176,7 +176,7 @@ def get_body():
     return (text.replace('<br>', '\n'), None)
 
 
-def get_emails():
+def get_emails() -> Generator[EMail, None, None]:
     """Actually sends emails"""
 
     subject, sender = get_subject(), get_sender()
@@ -226,20 +226,16 @@ def send_emails():
     try:
         verify(_load_secret(), get_response(), remote_ip=remote_ip)
     except VerificationError:
-        raise _error('reCAPTCHA check failed.') from None
+        return _error('reCAPTCHA check failed.')
 
     emails = tuple(get_emails())
     LOGGER.debug('Got emails: %s', emails)
 
     if not emails:
-        raise _error('No recipients specified.', status=400)
+        return _error('No recipients specified.', status=400)
 
-    try:
-        MAILER.send(emails)
-    except SMTPAuthenticationError:
-        raise _error('Invalid mailer credentials.', status=500) from None
-    except SMTPRecipientsRefused:
-        raise _error('Recipient refused.', status=500) from None
+    if MAILER.send(emails):
+        LOGGER.debug('Emails sent.')
+        return 'Emails sent.'
 
-    LOGGER.debug('Emails sent.')
-    return 'Emails sent.'
+    return ('Could not send (all) emails.', 500)
