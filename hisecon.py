@@ -6,7 +6,7 @@ A secure and spam-resistant email backend.
 from contextlib import suppress
 from functools import wraps
 from logging import DEBUG, INFO, basicConfig, getLogger
-from typing import Callable, Generator, Tuple, Union
+from typing import Callable, Generator, NamedTuple, Union
 
 from flask import request
 from werkzeug.local import LocalProxy
@@ -14,7 +14,7 @@ from werkzeug.local import LocalProxy
 from configlib import loadcfg
 from emaillib import Mailer, EMail
 from recaptcha import VerificationError, verify
-from wsgilib import Error, Application
+from wsgilib import Error, Application, get_bool
 
 
 __all__ = ['APPLICATION', 'CONFIG']
@@ -24,6 +24,13 @@ APPLICATION = Application('hisecon', debug=True, cors=True)
 CONFIG = loadcfg('hisecon.conf')
 LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
+
+
+class Attachment(NamedTuple):
+    """Attachment format settings and values."""
+
+    plain: Union[bool, str]
+    html: Union[bool, str]
 
 
 def debug(template: str, getter: Callable = lambda value: [value]) -> Callable:
@@ -100,18 +107,19 @@ def get_response() -> str:
 
 
 @debug('Format: %s')
-def get_format() -> str:
+def get_format() -> Attachment:
     """Returns the desired format."""
 
     try:
-        return request.args['format']
+        frmt = request.args['format']
     except KeyError:
-        html = request.args.get('html')
+        plain = get_bool('text') or get_bool('plain')
+        return Attachment(plain=plain, html=get_bool('html'))
 
-        if html is not None:
-            return 'html'
+    if frmt == 'html':
+        return Attachment(plain=False, html=True)
 
-        return 'text'
+    return Attachment(plain=True, html=False)
 
 
 def get_recipients() -> Generator[str, None, None]:
@@ -151,28 +159,17 @@ def get_sender() -> str:
         return CONFIG['mail']['from']
 
 
-@debug('Body:\n\tHTML: %s\n\tText: %s', getter=lambda tpl: tpl)
-def get_body() -> Tuple[Union[str, None], Union[str, None]]:
+@debug('Body:\n\tText: %s\n\tHTML: %s', getter=lambda tpl: tpl)
+def get_body() -> Attachment:
     """Returns the emails plain text and HTML bodies."""
 
-    format = get_format()   # pylint: disable=W0622
+    plain, html = get_format()
     # XXX: This is a hack until all clients send
     # data with correct "Content-Type" settings.
     text = request.get_data(as_text=True)
-
-    if format == 'html':
-        LOGGER.info('Email format is: HTML.')
-        return (None, text)
-
-    if format == 'json':
-        LOGGER.info('Email format is: JSON.')
-        return (None, text)
-
-    if format != 'text':
-        LOGGER.warning('Unknown format. Defaulting to plain text.')
-
-    LOGGER.info('Email format is: plain text.')
-    return (text.replace('<br>', '\n'), None)
+    html = text if html else None
+    plain = text.replace('<br>', '\n') if plain else None
+    return Attachment(plain=plain, html=html)
 
 
 def get_emails() -> Generator[EMail, None, None]:
