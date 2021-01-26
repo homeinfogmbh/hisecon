@@ -108,7 +108,7 @@ def get_format() -> str:
     except KeyError:
         html = request.args.get('html')
 
-        if html or html == '':
+        if html is not None:
             return 'html'
 
         return 'text'
