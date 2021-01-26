@@ -11,18 +11,17 @@ from typing import Callable, Generator, Tuple, Union
 from flask import request
 from werkzeug.local import LocalProxy
 
-from configlib import load_ini, load_json
+from configlib import loadcfg
 from emaillib import Mailer, EMail
 from recaptcha import VerificationError, verify
 from wsgilib import Error, Application
 
 
-__all__ = ['CONFIG', 'JSON', 'APPLICATION']
+__all__ = ['APPLICATION', 'CONFIG']
 
 
 APPLICATION = Application('hisecon', debug=True, cors=True)
-CONFIG = load_ini('hisecon.conf')
-JSON = load_json('hisecon.json')
+CONFIG = loadcfg('hisecon.conf')
 LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger('hisecon')
 
@@ -58,7 +57,7 @@ def _load_site() -> dict:
         raise _error('No configuration provided.') from None
 
     try:
-        return JSON[config]
+        return loadcfg('hisecon.json')[config]
     except KeyError:
         raise _error(f'No such configuration: {config}', status=400) from None
 
@@ -79,10 +78,10 @@ def _load_mailer() -> Mailer:
     """Returns an appropriate mailer."""
 
     smtp = SITE.get('smtp', {})
-    host = smtp.get('host', CONFIG['mail']['HOST'])
-    port = smtp.get('port', int(CONFIG['mail']['PORT']))
-    user = smtp.get('user', CONFIG['mail']['USER'])
-    passwd = smtp.get('passwd', CONFIG['mail']['PASSWD'])
+    host = smtp.get('host', CONFIG.get('mail', 'HOST'))
+    port = smtp.get('port', CONFIG.getint('mail', 'PORT'))
+    user = smtp.get('user', CONFIG.get('mail', 'USER'))
+    passwd = smtp.get('passwd', CONFIG.get('mail', 'PASSWD'))
     ssl = smtp.get('ssl', True)
     return Mailer(host, port, user, passwd, ssl=ssl)
 
