@@ -30,6 +30,19 @@ const SUCCESS_MSG = 'Anfrage versendet!';
 
 
 /*
+    An email.
+*/
+export class EMail {
+    constructor (recipient, text, html = false, replyTo = null) {
+        this.recipient = recipient;
+        this.text = text;
+        this.html = html;
+        this.replyTo = replyTo;
+    }
+}
+
+
+/*
     Sends an email.
 */
 export class Mailer {
@@ -43,7 +56,7 @@ export class Mailer {
     /*
       Returns the respective URL for the Ajax call.
     */
-    getURL (response, recipient, subject, reply_to) {
+    getURL (response, subject, email) {
         let url = BASE_URL + '?config=' + this.config;
 
         if (response)
@@ -52,14 +65,14 @@ export class Mailer {
         if (subject)
             url += '&subject=' + subject;
 
-        if (recipient)
-            url += '&recipient=' + recipient;
+        if (email.recipient)
+            url += '&recipient=' + email.recipient;
 
-        if (reply_to)
-            url += '&reply_to=' + reply_to;
-
-        if (this.html)
+        if (email.html)
             url += '&html=true';
+
+        if (email.replyTo)
+            url += '&reply_to=' + email.replyTo;
 
         return url;
     }
@@ -67,8 +80,8 @@ export class Mailer {
     /*
         Sends an email.
     */
-    send (response, recipient, subject, body, reply_to = null, headers = {}}) {
-        const url = this.getURL(response, recipient, subject, reply_to);
-        return request.post(url, body, headers)
+    send (response, subject, email, headers = {}}) {
+        const url = this.getURL(response, subject, email);
+        return request.post(url, email.text, headers)
     }
 }
