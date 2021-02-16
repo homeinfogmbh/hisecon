@@ -6,7 +6,7 @@ A secure and spam-resistant email backend.
 from contextlib import suppress
 from functools import wraps
 from logging import DEBUG, INFO, basicConfig, getLogger
-from typing import Callable, Generator, NamedTuple, Union
+from typing import Callable, Iterator, NamedTuple, Union
 
 from flask import request
 from werkzeug.local import LocalProxy
@@ -122,7 +122,7 @@ def get_format() -> Attachment:
     return Attachment(plain=True, html=False)
 
 
-def get_recipients() -> Generator[str, None, None]:
+def get_recipients() -> Iterator[str]:
     """Yields all recipients."""
 
     yield from SITE.get('recipients', ())
@@ -172,7 +172,7 @@ def get_body() -> Attachment:
     return Attachment(plain=plain, html=html)
 
 
-def get_emails() -> Generator[EMail, None, None]:
+def get_emails() -> Iterator[EMail]:
     """Actually sends emails"""
 
     subject, sender = get_subject(), get_sender()
