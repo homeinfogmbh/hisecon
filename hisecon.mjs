@@ -1,5 +1,5 @@
 /*
-  hisecon.js - HOMEINFO Secure Contact forms.
+  hisecon.mjs - HOMEINFO Secure Contact forms.
 
   (C) 2020-2021 HOMEINFO - Digitale Informationssysteme GmbH
 
