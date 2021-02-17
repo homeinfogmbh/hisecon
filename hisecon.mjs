@@ -29,6 +29,19 @@ const ERROR_MSG = 'Fehler beim Versenden!\nBitte versuchen Sie es später noch e
 const SUCCESS_MSG = 'Anfrage versendet!';
 
 
+export class Contact {
+    constructor (salutation, firstName, lastName, address, email, phone, member) {
+        this.salutation = salutation;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+        this.member = member;
+    }
+}
+
+
 /*
     An email.
 */
@@ -38,6 +51,23 @@ export class EMail {
         this.text = text;
         this.html = html;
         this.replyTo = replyTo;
+    }
+
+    static forAareon(recipient, realEstate, contact, message) {
+        const aareonFields = [
+            ['Objekt', realEstate.objectId],
+            ['Anrede', contact.salutation],
+            ['Vorname', contact.firstName],
+            ['Nachname', contact.lastName],
+            ['Strasse', contact.address.streetHouseNumber],
+            ['PLZ', contact.address.zipCode],
+            ['Ort', contact.address.city],
+            ['E-Mail', contact.email],
+            ['Mitglied', 'Ja' ? contact.member : 'Nein'],
+            ['Bemerkung', message]
+        ];
+        const text = aareonFields.map(field => field.join(': ')).join('\n');
+        return new this(recipient, text);
     }
 }
 
