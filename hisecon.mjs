@@ -24,9 +24,7 @@
 import { request } from 'https://javascript.homeinfo.de/request.mjs';
 
 
-const BASE_URL = 'https://hisecon.homeinfo.de';
-const ERROR_MSG = 'Fehler beim Versenden!\nBitte versuchen Sie es später noch ein Mal.';
-const SUCCESS_MSG = 'Anfrage versendet!';
+const URL = 'https://hisecon.homeinfo.de';
 
 
 export class Contact {
@@ -46,10 +44,10 @@ export class Contact {
     An email.
 */
 export class EMail {
-    constructor (recipient, text, html = false, replyTo = null) {
-        this.recipient = recipient;
+    constructor (text, recipients = [], contentType = 'text/plain', replyTo = null) {
         this.text = text;
-        this.html = html;
+        this.recipients = recipients;
+        this.contentType = contentType;
         this.replyTo = replyTo;
     }
 
@@ -67,7 +65,7 @@ export class EMail {
             ['Bemerkung', message]
         ];
         const text = aareonFields.map(field => field.join(': ')).join('\n');
-        return new this(recipient, text);
+        return new this(text, [recipient]);
     }
 }
 
@@ -76,42 +74,29 @@ export class EMail {
     Sends an email.
 */
 export class Mailer {
-    constructor (config, html = true, successMsg = SUCCESS_MSG, errorMsg = ERROR_MSG) {
+    constructor (config) {
         this.config = config;
-        this.html = html;
-        this.successMsg = successMsg;
-        this.errorMsg = errorMsg;
     }
 
     /*
-      Returns the respective URL for the Ajax call.
+      Returns a JSON object that represents a request for HISECON.
     */
-    getURL (response, subject, email) {
-        let url = BASE_URL + '?config=' + this.config;
-
-        if (response)
-            url += '&response=' + response;
-
-        if (subject)
-            url += '&subject=' + subject;
-
-        if (email.recipient)
-            url += '&recipient=' + email.recipient;
-
-        if (email.html)
-            url += '&html=true';
-
-        if (email.replyTo)
-            url += '&reply_to=' + email.replyTo;
-
-        return url;
+    makeRequest (response, subject, email) {
+        return {
+            config: this.config,
+            response: response,
+            subject: subject,
+            text: email.text,
+            recipients: email.recipients,
+            contentType: email.contentType,
+            replyTo: email.replyTo
+        };
     }
 
     /*
         Sends an email.
     */
     send (response, subject, email, headers = {}}) {
-        const url = this.getURL(response, subject, email);
-        return request.post(url, email.text, headers)
+        return request.post(URL, this.makeRequest(response, subject, email), headers)
     }
 }
