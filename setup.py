@@ -22,6 +22,6 @@ setup(
         'werkzeug',
         'wsgilib'
     ],
-    py_modules=['hisecon'],
+    packages=['hisecon'],
     description='HOMEINFO Secure Contact form'
 )
