@@ -21,7 +21,7 @@
 'use strict';
 
 
-import { request } from 'https://javascript.homeinfo.de/request.mjs';
+import { request } from 'https://javascript.homeinfo.de/requests.mjs';
 
 
 const URL = 'https://hisecon.homeinfo.de';
