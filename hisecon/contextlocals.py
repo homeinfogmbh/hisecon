@@ -18,7 +18,7 @@ def load_mailer() -> Mailer:
 
     smtp = SITE.get('smtp', {})
     host = smtp.get('host', CONFIG.get('mail', 'HOST'))
-    port = smtp.getint('port', CONFIG.getint('mail', 'PORT'))
+    port = smtp.get('port', CONFIG.getint('mail', 'PORT'))
     user = smtp.get('user', CONFIG.get('mail', 'USER'))
     passwd = smtp.get('passwd', CONFIG.get('mail', 'PASSWD'))
     ssl = smtp.get('ssl', True)
