@@ -7,7 +7,7 @@ default: | pull clean install
 install: | backend frontend
 
 backend:
-	@ install -m 644 hisecon.mjs /srv/http/de/homeinfo/javascript/hisecon.mjs
+	@ ./setup.py install --record $(FILE_LIST)
 
 frontend:
 	@ install -m 644 hisecon.mjs /srv/http/de/homeinfo/javascript/hisecon.mjs
