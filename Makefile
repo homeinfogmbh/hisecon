@@ -2,7 +2,7 @@ FILE_LIST = ./.installed_files.txt
 
 .PHONY: backend frontend pull push clean install uninstall
 
-default: | pull clean install
+default: pull clean install
 
 backend:
 	@ install -m 644 hisecon.mjs /srv/http/de/homeinfo/javascript/hisecon.mjs
@@ -10,7 +10,7 @@ backend:
 frontend:
 	@ install -m 644 hisecon.mjs /srv/http/de/homeinfo/javascript/hisecon.mjs
 
-install: | backend frontend
+install: backend frontend
 
 uninstall:
 	@ while read FILE; do echo "Removing: $$FILE"; rm "$$FILE"; done < $(FILE_LIST)
