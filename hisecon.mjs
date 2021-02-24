@@ -99,7 +99,7 @@ export function immoblueMessage (realEstate, contact, message) {
         ['PLZ', contact.address.zipCode],
         ['Ort', contact.address.city],
         ['E-Mail', contact.email],
-        ['Mitglied', 'Ja' ? contact.member : 'Nein'],
+        ['Mitglied', contact.member ? 'Ja' : 'Nein'],
         ['Bemerkung', message]
     ];
     return fields.map(field => field.join(': ')).join('\n');
