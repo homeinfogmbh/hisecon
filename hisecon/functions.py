@@ -42,7 +42,7 @@ def get_emails() -> Iterator[EMail]:
 def get_html_text() -> Optional[str]:
     """Returns the HTML text attachment for the email."""
 
-    if get_content_type() == 'text/plain':
+    if get_content_type() in {'text/html', 'application/xhtml+xml'}:
         return get_text()
 
     return None
@@ -51,7 +51,7 @@ def get_html_text() -> Optional[str]:
 def get_plain_text() -> Optional[str]:
     """Returns the plain text attachment for the email."""
 
-    if get_content_type() in {'text/html', 'application/xhtml+xml'}:
+    if get_content_type() == 'text/plain':
         return get_text()
 
     return None
