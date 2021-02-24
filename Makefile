@@ -1,6 +1,6 @@
 FILE_LIST = ./.installed_files.txt
 
-.PHONY: backend frontend pull push clean install uninstall
+.PHONY: pull push clean backend frontend install uninstall
 
 default: pull clean install
 
