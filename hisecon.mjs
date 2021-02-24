@@ -35,7 +35,7 @@ export class Contact {
         this.address = address;
         this.email = email;
         this.phone = phone;
-        this.member = member;
+        this.member = member;   // Member of the housing association.
     }
 }
 
@@ -44,28 +44,12 @@ export class Contact {
     An email.
 */
 export class EMail {
-    constructor (text, recipients = [], contentType = 'text/plain', replyTo = null) {
+    constructor (subject, text, recipients = [], contentType = 'text/plain', replyTo = null) {
+        this.subject = subject;
         this.text = text;
         this.recipients = recipients;
         this.contentType = contentType;
         this.replyTo = replyTo;
-    }
-
-    static forAareon(recipient, realEstate, contact, message) {
-        const aareonFields = [
-            ['Objekt', realEstate.objectId],
-            ['Anrede', contact.salutation],
-            ['Vorname', contact.firstName],
-            ['Nachname', contact.lastName],
-            ['Strasse', contact.address.streetHouseNumber],
-            ['PLZ', contact.address.zipCode],
-            ['Ort', contact.address.city],
-            ['E-Mail', contact.email],
-            ['Mitglied', 'Ja' ? contact.member : 'Nein'],
-            ['Bemerkung', message]
-        ];
-        const text = aareonFields.map(field => field.join(': ')).join('\n');
-        return new this(text, [recipient]);
     }
 }
 
@@ -81,11 +65,11 @@ export class Mailer {
     /*
       Returns a JSON object that represents a request for HISECON.
     */
-    makeRequest (response, subject, email) {
+    makeRequest (response, email) {
         return {
             config: this.config,
             response: response,
-            subject: subject,
+            subject: email.subject,
             text: email.text,
             recipients: email.recipients,
             contentType: email.contentType,
@@ -96,7 +80,27 @@ export class Mailer {
     /*
         Sends an email.
     */
-    send (response, subject, email, headers = {}}) {
-        return request.post(URL, this.makeRequest(response, subject, email), headers)
+    send (response, email, headers = {}) {
+        return request.post(URL, this.makeRequest(response, email), headers)
     }
+}
+
+
+/*
+    Creates a text message for ImmoBlue.
+*/
+export function immoblueMessage (realEstate, contact, message) {
+    const fields = [
+        ['Objekt', realEstate.objectId],
+        ['Anrede', contact.salutation],
+        ['Vorname', contact.firstName],
+        ['Nachname', contact.lastName],
+        ['Strasse', contact.address.streetHouseNumber],
+        ['PLZ', contact.address.zipCode],
+        ['Ort', contact.address.city],
+        ['E-Mail', contact.email],
+        ['Mitglied', 'Ja' ? contact.member : 'Nein'],
+        ['Bemerkung', message]
+    ];
+    return fields.map(field => field.join(': ')).join('\n');
 }
