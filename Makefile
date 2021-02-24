@@ -13,3 +13,9 @@ uninstall:
 
 clean:
 	@ rm -Rf ./build
+
+pull:
+	@ git pull
+
+push:
+	@ git push
