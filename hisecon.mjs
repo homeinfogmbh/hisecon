@@ -99,6 +99,7 @@ export function immoblueMessage (realEstate, contact, message) {
         ['PLZ', contact.address.zipCode],
         ['Ort', contact.address.city],
         ['E-Mail', contact.email],
+        ['Telefon', contact.phone],
         ['Mitglied', contact.member ? 'Ja' : 'Nein'],
         ['Bemerkung', message]
     ];
