@@ -71,8 +71,8 @@ export class Mailer {
             response: response,
             subject: email.subject,
             text: email.text,
-            recipients: email.recipients,
             contentType: email.contentType,
+            recipients: email.recipients,
             replyTo: email.replyTo
         };
     }
