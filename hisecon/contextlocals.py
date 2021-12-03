@@ -3,7 +3,7 @@
 from flask import request
 from werkzeug.local import LocalProxy
 
-from configlib import loadcfg
+from configlib import load_config
 from emaillib import Mailer
 
 from hisecon.config import CONFIG
@@ -34,7 +34,7 @@ def load_site() -> dict:
         raise error('No configuration provided.') from None
 
     try:
-        return loadcfg('hisecon.json')[config]
+        return load_config('hisecon.json')[config]
     except KeyError:
         raise error(f'No such configuration: {config}', status=400) from None
 
