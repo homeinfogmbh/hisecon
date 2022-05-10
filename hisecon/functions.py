@@ -29,14 +29,14 @@ def get_emails() -> Iterator[EMail]:
 
     for recipient in get_recipients():
         LOGGER.debug('Recipient: %s', recipient)
-        email = EMail(get_subject(), get_sender(), recipient,
-                      plain=get_plain_text(), html=get_html_text())
-        reply_to = request.json.get('replyTo')
-
-        if reply_to is not None:
-            email.add_header('reply-to', reply_to)
-
-        yield email
+        yield EMail(
+            get_subject(),
+            get_sender(),
+            recipient,
+            plain=get_plain_text(),
+            html=get_html_text(),
+            reply_to=request.json.get('replyTo')
+        )
 
 
 def get_html_text() -> Optional[str]:
