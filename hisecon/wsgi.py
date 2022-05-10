@@ -41,8 +41,5 @@ def send_emails():
     if not emails:
         return error('No recipients specified.', status=400)
 
-    if MAILER.send(emails):
-        LOGGER.debug('Emails sent.')
-        return 'Emails sent.'
-
-    return ('Could not send (all) emails.', 500)
+    MAILER.send(emails)
+    return 'Emails sent.'
