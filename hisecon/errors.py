@@ -5,7 +5,7 @@ from wsgilib import Error
 from hisecon.config import LOGGER
 
 
-__all__ = ['error']
+__all__ = ["error"]
 
 
 def error(message: str, *, status: int = 400) -> Error:

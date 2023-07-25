@@ -11,10 +11,10 @@ from hisecon.errors import error
 from hisecon.functions import get_emails, verify
 
 
-__all__ = ['APPLICATION']
+__all__ = ["APPLICATION"]
 
 
-APPLICATION = Application('hisecon', cors=True)
+APPLICATION = Application("hisecon", cors=True)
 
 
 @APPLICATION.before_first_request
@@ -22,24 +22,24 @@ def init_logger():
     """Initializes the logger."""
 
     CONFIG.read(CONFIG_FILE)
-    debug_mode = CONFIG.getboolean('app', 'debug', fallback=False)
+    debug_mode = CONFIG.getboolean("app", "debug", fallback=False)
     basicConfig(level=DEBUG if debug_mode else INFO, format=LOG_FORMAT)
 
 
-@APPLICATION.route('/', methods=['POST'])
+@APPLICATION.route("/", methods=["POST"])
 def send_emails():
     """Sends emails."""
 
     try:
         verify()
     except VerificationError:
-        return error('reCAPTCHA check failed.')
+        return error("reCAPTCHA check failed.")
 
     emails = tuple(get_emails())
-    LOGGER.debug('Got emails: %s', emails)
+    LOGGER.debug("Got emails: %s", emails)
 
     if not emails:
-        return error('No recipients specified.', status=400)
+        return error("No recipients specified.", status=400)
 
     MAILER.send(emails)
-    return 'Emails sent.'
+    return "Emails sent."

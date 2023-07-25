@@ -12,37 +12,37 @@ from hisecon.contextlocals import SITE
 from hisecon.errors import error
 
 
-__all__ = ['get_emails', 'verify']
+__all__ = ["get_emails", "verify"]
 
 
 def get_content_type() -> str:
     """Returns the content type."""
 
     try:
-        return request.json['contentType']
+        return request.json["contentType"]
     except KeyError:
-        raise error('No content type provided') from None
+        raise error("No content type provided") from None
 
 
 def get_emails() -> Iterator[EMail]:
     """Actually sends emails"""
 
     for recipient in get_recipients():
-        LOGGER.debug('Recipient: %s', recipient)
+        LOGGER.debug("Recipient: %s", recipient)
         yield EMail(
             get_subject(),
             get_sender(),
             recipient,
             plain=get_plain_text(),
             html=get_html_text(),
-            reply_to=request.json.get('replyTo')
+            reply_to=request.json.get("replyTo"),
         )
 
 
 def get_html_text() -> Optional[str]:
     """Returns the HTML text attachment for the email."""
 
-    if get_content_type() in {'text/html', 'application/xhtml+xml'}:
+    if get_content_type() in {"text/html", "application/xhtml+xml"}:
         return get_text()
 
     return None
@@ -51,7 +51,7 @@ def get_html_text() -> Optional[str]:
 def get_plain_text() -> Optional[str]:
     """Returns the plain text attachment for the email."""
 
-    if get_content_type() == 'text/plain':
+    if get_content_type() == "text/plain":
         return get_text()
 
     return None
@@ -60,53 +60,53 @@ def get_plain_text() -> Optional[str]:
 def get_recipients() -> Iterator[str]:
     """Yields all recipients."""
 
-    yield from SITE.get('recipients', [])
-    yield from request.json.get('recipients', [])
+    yield from SITE.get("recipients", [])
+    yield from request.json.get("recipients", [])
 
 
 def get_response() -> str:
     """Returns the respective reCAPTCHA response."""
 
     try:
-        return request.json['response']
+        return request.json["response"]
     except KeyError:
-        raise error('No reCAPTCHA response provided.') from None
+        raise error("No reCAPTCHA response provided.") from None
 
 
 def get_secret() -> str:
     """Returns the respective ReCAPTCHA secret."""
 
     try:
-        return SITE['secret']
+        return SITE["secret"]
     except KeyError:
-        raise error('No secret specified.', status=500) from None
+        raise error("No secret specified.", status=500) from None
 
 
 def get_sender() -> str:
     """Returns the specified sender's email address."""
 
     try:
-        return SITE['smtp']['from']
+        return SITE["smtp"]["from"]
     except KeyError:
-        return CONFIG['mail']['from']
+        return CONFIG["mail"]["from"]
 
 
 def get_subject() -> str:
     """Returns the subject."""
 
     try:
-        return request.json['subject']
+        return request.json["subject"]
     except KeyError:
-        raise error('No subject provided') from None
+        raise error("No subject provided") from None
 
 
 def get_text() -> str:
     """Returns the message text."""
 
     try:
-        return request.json['text']
+        return request.json["text"]
     except KeyError:
-        raise error('No text provided') from None
+        raise error("No text provided") from None
 
 
 def verify() -> bool:
